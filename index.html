@@ -327,12 +327,19 @@
     max-width: 64ch;
   }
 
+  /* Multi-paragraph descriptions */
+  .description p {
+    margin-bottom: 1em;
+  }
+  .description p:last-child {
+    margin-bottom: 0;
+  }
+
   /* ── Map link ── */
   .map-link {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    margin-top: 1.2rem;
     font-family: 'Cinzel', serif;
     font-size: 0.58rem;
     letter-spacing: 0.15em;
@@ -347,6 +354,21 @@
     border-color: var(--gold-mid);
     background: var(--parchment-mid);
     color: var(--gold-bright);
+  }
+
+  /* ── Map link container — sits just above commentary rule ── */
+  .map-link-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.25rem;
+  }
+  .map-link-wrap .map-link-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.5rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
   }
 
   /* ── Section titles ── */
@@ -820,8 +842,6 @@ function buildFilters() {
   const wrap = document.getElementById('filters');
   wrap.innerHTML = sections.map((s, i) => {
     const glyph = SECTION_GLYPHS[s] || '';
-    const sep = (i === 0) ? '<div class="filter-divider"></div>' : '';
-    const isSort = false;
     return `${i === 1 ? '<div class="filter-divider"></div>' : ''}
       <button class="pill ${s === 'All' ? 'active' : ''}" data-section="${s}"
               style="${s !== 'All' ? `--pill-accent:${SECTION_ACCENT[s] || '#7a5820'}` : ''}">
@@ -879,6 +899,17 @@ function shortSection(s) {
   return map[s] || s;
 }
 
+// ── Description renderer — handles multi-paragraph text ──────────────────────
+function renderDescription(text) {
+  if (!text) return '';
+  // Split on double newlines for paragraphs, single newlines become spaces
+  const paras = text.split(/\n\n+/).map(p => p.replace(/\n/g, ' ').trim()).filter(Boolean);
+  if (paras.length <= 1) {
+    return `<p class="description">${text.replace(/\n/g, '<br>')}</p>`;
+  }
+  return `<div class="description">${paras.map(p => `<p>${p}</p>`).join('')}</div>`;
+}
+
 // ── Term detail ───────────────────────────────────────────────────────────────
 function selectTerm(id) {
   activeTermId = id;
@@ -895,6 +926,17 @@ function renderDetail(term) {
   const refs  = getCrossRefs(term.id);
   const hasDetail = term.description || term.original_word || term.meaning_of_name;
   const accent = SECTION_ACCENT[term.section] || '#a87c2a';
+  const isPlace = term.section === 'Places';
+
+  // Map link HTML — used just above the commentary rule
+  const mapLinkHtml = (term.lat && term.lon) ? `
+    <div class="map-link-wrap">
+      <a class="map-link"
+         href="https://www.google.com/maps?q=${term.lat},${term.lon}&z=10"
+         target="_blank" rel="noopener noreferrer">
+        ⛰ View on Map
+      </a>
+    </div>` : '';
 
   const detail = document.getElementById('detail');
   detail.innerHTML = `
@@ -929,13 +971,7 @@ function renderDetail(term) {
         </div>` : ''}
     </div>` : ''}
 
-    ${term.description ? `<p class="description">${term.description}</p>` : ''}
-
-    ${(term.lat && term.lon) ? `
-    <a class="map-link" href="https://www.google.com/maps?q=${term.lat},${term.lon}&z=10"
-       target="_blank" rel="noopener noreferrer">
-      🗺 View on Map
-    </a>` : ''}
+    ${term.description ? renderDescription(term.description) : ''}
 
     ${rels.length ? `
     <hr class="rule">
@@ -957,6 +993,7 @@ function renderDetail(term) {
     </div>` : ''}
 
     <hr class="rule">
+    ${mapLinkHtml}
     <div class="section-title">Matthew Henry's Commentary</div>
     <div id="mhc-zone">
       <p class="mhc-note">Loading commentary…</p>
@@ -1132,7 +1169,6 @@ function renderMHCBlock(chunk) {
 
 function attachMHCToggles() {
   document.querySelectorAll('.mhc-header').forEach(header => {
-    // Remove old listeners by cloning
     const fresh = header.cloneNode(true);
     header.parentNode.replaceChild(fresh, header);
     fresh.addEventListener('click', () => {
