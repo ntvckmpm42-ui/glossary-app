@@ -5,19 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bible Glossary — Character Study</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel:wght@400;600&family=Source+Code+Pro:wght@400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
 <style>
+  /* ── Design tokens — exact match to JSX parchment edition ── */
   :root {
-    --ink:       #1a1410;
-    --parch:     #f5f0e8;
-    --parch2:    #ede7d9;
-    --gold:      #9a7a3a;
-    --gold-lt:   #c4a45a;
-    --rust:      #7a3a2a;
-    --sage:      #4a6a5a;
-    --rule:      rgba(154,122,58,0.25);
-    --shadow:    rgba(26,20,16,0.12);
+    --parchment-deep:   #1a1208;
+    --parchment-dark:   #211a0e;
+    --parchment-mid:    #2c2212;
+    --parchment-warm:   #3a2f18;
+    --parchment-border: #5a4a28;
+    --parchment-glow:   #7a6035;
+    --ink-light:        #e8d5a0;
+    --ink-dim:          #b8a070;
+    --ink-faint:        #7a6540;
+    --gold-bright:      #d4a843;
+    --gold-mid:         #a87c2a;
+    --gold-dim:         #7a5820;
+
+    /* Section accents */
+    --accent-books:     #C8A84B;
+    --accent-ot:        #B87333;
+    --accent-nt:        #7B9EC0;
+    --accent-places:    #8B7355;
+    --accent-groups:    #A0845C;
+    --accent-doctrine:  #9B7FA6;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,43 +37,61 @@
   html { font-size: 16px; scroll-behavior: smooth; }
 
   body {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    background: var(--parch);
-    color: var(--ink);
+    font-family: 'IM Fell English', Georgia, serif;
+    background: var(--parchment-deep);
+    color: var(--ink-light);
     min-height: 100vh;
     overflow-x: hidden;
   }
 
   /* ── Grain overlay ── */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none; z-index: 9999; opacity: 0.4;
+  .grain-overlay {
+    position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+    opacity: 0.4;
+    mix-blend-mode: overlay;
   }
 
   /* ── Header ── */
   header {
-    border-bottom: 1px solid var(--rule);
-    padding: 2rem 2.5rem 1.5rem;
-    display: flex; align-items: baseline; gap: 2rem;
-    flex-wrap: wrap;
-    background: linear-gradient(180deg, var(--parch2) 0%, var(--parch) 100%);
+    background: linear-gradient(180deg, #0d0a04 0%, var(--parchment-deep) 100%);
+    border-bottom: 1px solid var(--parchment-border);
+    padding: 1.75rem 2rem 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 50% -20%, rgba(180,130,40,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .header-rule {
+    display: flex; align-items: center; gap: 1rem; margin-bottom: 0.6rem;
+  }
+  .header-rule::before, .header-rule::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), var(--gold-mid), var(--gold-dim), transparent);
+  }
+  .header-ornament { color: var(--gold-bright); font-size: 1rem; }
+
+  .header-top {
+    display: flex; align-items: center; gap: 2rem; flex-wrap: wrap;
   }
 
   .wordmark {
     font-family: 'Cinzel', serif;
-    font-size: 1.05rem;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
     letter-spacing: 0.18em;
-    color: var(--gold);
+    color: var(--gold-bright);
     text-transform: uppercase;
     white-space: nowrap;
+    text-shadow: 0 0 20px rgba(212,168,67,0.35);
   }
-
-  .wordmark span {
-    color: var(--ink);
-    opacity: 0.4;
+  .wordmark .sep {
+    color: var(--gold-dim);
     font-weight: 400;
     margin: 0 0.4em;
   }
@@ -69,186 +99,232 @@
   /* ── Search bar ── */
   .search-wrap {
     flex: 1; min-width: 220px; position: relative;
+    max-width: 520px;
   }
 
   #search {
     width: 100%;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.05rem;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--rule);
-    padding: 0.3rem 0.3rem 0.3rem 1.6rem;
-    color: var(--ink);
+    font-family: 'IM Fell English', Georgia, serif;
+    font-size: 0.95rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--parchment-border);
+    padding: 0.45rem 0.75rem 0.45rem 2rem;
+    color: var(--ink-light);
     outline: none;
-    transition: border-color 0.2s;
+    border-radius: 1px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-style: italic;
   }
-  #search:focus { border-color: var(--gold); }
-  #search::placeholder { color: var(--ink); opacity: 0.35; font-style: italic; }
+  #search:focus {
+    border-color: var(--gold-mid);
+    box-shadow: 0 0 12px rgba(168,124,42,0.2);
+  }
+  #search::placeholder { color: var(--ink-faint); font-style: italic; }
 
   .search-icon {
-    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-    opacity: 0.35; font-size: 0.85rem;
+    position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%);
+    color: var(--ink-faint); font-size: 0.9rem; pointer-events: none;
   }
 
-  /* ── Filter pills ── */
-  .filters {
-    display: flex; gap: 0.5rem; flex-wrap: wrap;
-    padding: 0.9rem 2.5rem;
-    border-bottom: 1px solid var(--rule);
-    background: var(--parch);
+  /* ── Filter bar ── */
+  .filter-bar {
+    display: flex; gap: 0.35rem; flex-wrap: wrap;
+    padding: 0.65rem 2rem;
+    border-bottom: 1px solid var(--parchment-border);
+    background: var(--parchment-dark);
+    align-items: center;
+  }
+
+  .filter-divider {
+    width: 1px; height: 1.1rem;
+    background: var(--parchment-border);
+    margin: 0 0.25rem;
+    flex-shrink: 0;
   }
 
   .pill {
     font-family: 'Cinzel', serif;
-    font-size: 0.62rem;
+    font-size: 0.55rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    padding: 0.3rem 0.75rem;
-    border: 1px solid var(--rule);
-    border-radius: 0;
+    padding: 0.28rem 0.65rem;
+    border: 1px solid var(--parchment-border);
+    border-radius: 1px;
     background: transparent;
-    color: var(--ink);
-    opacity: 0.55;
+    color: var(--ink-dim);
     cursor: pointer;
     transition: all 0.15s;
+    white-space: nowrap;
   }
-  .pill:hover { opacity: 0.85; border-color: var(--gold); }
-  .pill.active { background: var(--gold); border-color: var(--gold); color: var(--parch); opacity: 1; }
+  .pill:hover {
+    border-color: var(--gold-dim);
+    color: var(--ink-light);
+    background: rgba(255,255,255,0.03);
+  }
+  .pill.active {
+    background: var(--gold-dim);
+    border-color: var(--gold-mid);
+    color: var(--ink-light);
+  }
 
   /* ── Layout ── */
   .layout {
     display: grid;
-    grid-template-columns: 280px 1fr;
-    min-height: calc(100vh - 120px);
+    grid-template-columns: 270px 1fr;
+    min-height: calc(100vh - 130px);
   }
 
   /* ── Term list ── */
   .term-list {
-    border-right: 1px solid var(--rule);
+    border-right: 1px solid var(--parchment-border);
     overflow-y: auto;
-    max-height: calc(100vh - 120px);
+    max-height: calc(100vh - 130px);
     position: sticky; top: 0;
+    background: var(--parchment-dark);
   }
 
   .term-count {
     font-family: 'Cinzel', serif;
-    font-size: 0.6rem;
-    letter-spacing: 0.15em;
+    font-size: 0.52rem;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--gold);
-    padding: 0.8rem 1.2rem 0.5rem;
-    border-bottom: 1px solid var(--rule);
-    opacity: 0.7;
+    color: var(--gold-dim);
+    padding: 0.7rem 1.2rem 0.5rem;
+    border-bottom: 1px solid var(--parchment-border);
   }
 
   .term-item {
-    padding: 0.7rem 1.2rem;
+    padding: 0.65rem 1.2rem;
     cursor: pointer;
-    border-bottom: 1px solid transparent;
-    transition: all 0.12s;
+    border-bottom: 1px solid rgba(90,74,40,0.3);
+    transition: background 0.12s;
     display: flex; justify-content: space-between; align-items: baseline;
+    position: relative;
   }
-  .term-item:hover { background: var(--parch2); }
-  .term-item.active { background: var(--ink); color: var(--parch); }
-  .term-item.active .term-cat { color: var(--gold-lt); }
+  .term-item::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+    background: var(--section-accent, var(--gold-dim));
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .term-item:hover { background: var(--parchment-mid); }
+  .term-item:hover::before { opacity: 0.5; }
+  .term-item.active { background: var(--parchment-warm); }
+  .term-item.active::before { opacity: 1; }
 
   .term-name {
-    font-size: 1rem;
-    font-weight: 400;
+    font-family: 'IM Fell English', Georgia, serif;
+    font-size: 0.92rem;
     line-height: 1.3;
+    color: var(--ink-light);
   }
 
   .term-cat {
     font-family: 'Cinzel', serif;
-    font-size: 0.55rem;
+    font-size: 0.48rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    opacity: 0.45;
+    color: var(--ink-faint);
     white-space: nowrap;
     margin-left: 0.5rem;
+    flex-shrink: 0;
   }
 
   /* ── Detail panel ── */
   .detail {
     padding: 2.5rem 3rem;
     overflow-y: auto;
-    max-height: calc(100vh - 120px);
+    max-height: calc(100vh - 130px);
+    background: var(--parchment-deep);
   }
 
   .detail-empty {
     display: flex; align-items: center; justify-content: center;
     height: 100%;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-style: italic;
-    opacity: 0.3;
+    color: var(--ink-faint);
     text-align: center;
     line-height: 2;
+    letter-spacing: 0.05em;
   }
 
   /* ── Term header ── */
-  .term-header { margin-bottom: 2rem; }
+  .term-header { margin-bottom: 1.8rem; }
 
   .term-section-label {
     font-family: 'Cinzel', serif;
-    font-size: 0.62rem;
-    letter-spacing: 0.2em;
+    font-size: 0.58rem;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 0.5rem;
+    color: var(--section-accent-val, var(--gold-mid));
+    margin-bottom: 0.45rem;
   }
 
   .term-title {
     font-family: 'Cinzel', serif;
-    font-size: 2.2rem;
-    font-weight: 400;
+    font-size: 2rem;
+    font-weight: 600;
     line-height: 1.1;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.04em;
+    color: var(--gold-bright);
+    text-shadow: 0 0 24px rgba(212,168,67,0.25);
     margin-bottom: 0.4rem;
   }
 
   .term-meta {
-    font-size: 0.9rem;
-    font-style: italic;
-    opacity: 0.5;
-    display: flex; gap: 1rem; flex-wrap: wrap;
+    font-family: 'IM Fell English SC', serif;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    display: flex; gap: 0.8rem; flex-wrap: wrap;
+    letter-spacing: 0.03em;
   }
-
-  .term-meta span::before { content: '· '; }
+  .term-meta span { display: flex; align-items: center; gap: 0.35rem; }
+  .term-meta span::before { content: '·'; color: var(--gold-dim); }
   .term-meta span:first-child::before { content: ''; }
 
   /* ── Divider ── */
   .rule {
     border: none;
-    border-top: 1px solid var(--rule);
-    margin: 1.8rem 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--parchment-border), transparent);
+    margin: 1.6rem 0;
   }
 
   /* ── Meaning bar ── */
   .meaning-bar {
     display: flex; gap: 2rem; flex-wrap: wrap;
-    padding: 1rem 1.2rem;
-    background: var(--parch2);
-    border-left: 2px solid var(--gold);
-    margin-bottom: 1.8rem;
-    font-size: 0.95rem;
+    padding: 0.9rem 1.1rem;
+    background: var(--parchment-mid);
+    border-left: 2px solid var(--gold-mid);
+    border: 1px solid var(--parchment-border);
+    border-left: 2px solid var(--gold-mid);
+    margin-bottom: 1.6rem;
+    font-size: 0.88rem;
   }
 
   .meaning-item label {
     font-family: 'Cinzel', serif;
-    font-size: 0.58rem;
-    letter-spacing: 0.15em;
+    font-size: 0.5rem;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    opacity: 0.45;
+    color: var(--gold-dim);
     display: block;
     margin-bottom: 0.2rem;
+  }
+  .meaning-item span {
+    color: var(--ink-light);
+    font-style: italic;
   }
 
   /* ── Description ── */
   .description {
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     line-height: 1.85;
-    max-width: 62ch;
+    color: var(--ink-light);
+    font-style: italic;
+    max-width: 64ch;
   }
 
   /* ── Map link ── */
@@ -256,128 +332,168 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    margin-top: 1.4rem;
+    margin-top: 1.2rem;
     font-family: 'Cinzel', serif;
-    font-size: 0.65rem;
+    font-size: 0.58rem;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--gold);
+    color: var(--gold-mid);
     text-decoration: none;
-    border: 1px solid var(--rule);
-    padding: 0.4rem 0.9rem;
+    border: 1px solid var(--parchment-border);
+    padding: 0.35rem 0.8rem;
     transition: all 0.15s;
   }
-  .map-link:hover { border-color: var(--gold); background: var(--parch2); }
-
-  /* ── Relationships ── */
-  .section-title {
-    font-family: 'Cinzel', serif;
-    font-size: 0.65rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 0.9rem;
+  .map-link:hover {
+    border-color: var(--gold-mid);
+    background: var(--parchment-mid);
+    color: var(--gold-bright);
   }
 
+  /* ── Section titles ── */
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.58rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 0.75rem;
+  }
+
+  /* ── Relationships ── */
   .rel-grid {
-    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
     margin-bottom: 0.5rem;
   }
 
   .rel-chip {
     display: flex; align-items: center; gap: 0.4rem;
-    padding: 0.3rem 0.6rem;
-    border: 1px solid var(--rule);
-    font-size: 0.85rem;
+    padding: 0.28rem 0.6rem;
+    border: 1px solid var(--parchment-border);
+    background: var(--parchment-mid);
+    font-family: 'IM Fell English', Georgia, serif;
+    font-size: 0.82rem;
     cursor: pointer;
     transition: all 0.12s;
-    background: transparent;
-    color: var(--ink);
-    font-family: inherit;
+    color: var(--ink-light);
+    border-radius: 1px;
   }
-  .rel-chip:hover { border-color: var(--gold); background: var(--parch2); }
+  .rel-chip:hover {
+    border-color: var(--gold-dim);
+    background: var(--parchment-warm);
+    box-shadow: 0 0 8px rgba(120,90,40,0.2);
+  }
 
   .rel-type {
     font-family: 'Cinzel', serif;
-    font-size: 0.55rem;
+    font-size: 0.48rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--gold);
+    color: var(--gold-mid);
   }
 
   /* ── Cross-refs ── */
   .crossref-list {
-    display: flex; flex-wrap: wrap; gap: 0.4rem;
+    display: flex; flex-wrap: wrap; gap: 0.35rem;
   }
 
   .crossref-chip {
-    padding: 0.2rem 0.55rem;
-    border: 1px solid var(--rule);
-    font-size: 0.85rem;
+    padding: 0.22rem 0.5rem;
+    border: 1px solid var(--parchment-border);
+    background: transparent;
+    font-family: 'IM Fell English', Georgia, serif;
+    font-size: 0.82rem;
+    font-style: italic;
     cursor: pointer;
     transition: all 0.12s;
-    background: transparent;
-    color: var(--ink);
-    font-family: inherit;
-    font-style: italic;
+    color: var(--ink-dim);
+    border-radius: 1px;
   }
-  .crossref-chip:hover { border-color: var(--rust); color: var(--rust); }
+  .crossref-chip:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold-bright);
+    background: var(--parchment-mid);
+  }
+
+  /* ── Stub badge ── */
+  .stub-badge {
+    display: inline-block;
+    font-family: 'Cinzel', serif;
+    font-size: 0.48rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.12rem 0.35rem;
+    border: 1px solid var(--parchment-border);
+    color: var(--ink-faint);
+    vertical-align: middle;
+    margin-left: 0.6rem;
+  }
 
   /* ── MHC Commentary ── */
   .mhc-block {
-    background: var(--parch2);
-    border: 1px solid var(--rule);
-    margin-bottom: 0.8rem;
+    background: var(--parchment-mid);
+    border: 1px solid var(--parchment-border);
+    margin-bottom: 0.65rem;
     overflow: hidden;
+    border-radius: 1px;
   }
 
   .mhc-header {
-    display: flex; justify-content: space-between; align-items: baseline;
-    padding: 0.7rem 1rem;
-    border-bottom: 1px solid var(--rule);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.65rem 0.9rem;
+    border-bottom: 1px solid var(--parchment-border);
     cursor: pointer;
     transition: background 0.12s;
   }
-  .mhc-header:hover { background: rgba(154,122,58,0.06); }
+  .mhc-header:hover { background: rgba(212,168,67,0.06); }
 
   .mhc-ref {
     font-family: 'Cinzel', serif;
-    font-size: 0.72rem;
+    font-size: 0.65rem;
     letter-spacing: 0.1em;
-    color: var(--gold);
+    color: var(--gold-mid);
+    margin-bottom: 0.15rem;
   }
 
   .mhc-section-title {
-    font-size: 0.9rem;
+    font-family: 'IM Fell English', Georgia, serif;
+    font-size: 0.88rem;
     font-style: italic;
-    opacity: 0.65;
+    color: var(--ink-dim);
+    line-height: 1.3;
   }
 
   .mhc-toggle {
-    font-size: 0.75rem;
-    opacity: 0.35;
+    font-size: 0.7rem;
+    color: var(--ink-faint);
     transition: transform 0.2s;
+    flex-shrink: 0;
+    margin-left: 0.75rem;
   }
   .mhc-toggle.open { transform: rotate(180deg); }
 
   .mhc-text {
-    padding: 1rem 1rem 1.2rem;
-    font-size: 0.95rem;
-    line-height: 1.8;
+    padding: 0 0.9rem;
+    font-size: 0.88rem;
+    line-height: 1.85;
+    color: var(--ink-light);
+    font-style: italic;
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease, padding 0.3s;
+    transition: max-height 0.35s ease, padding 0.35s;
   }
-  .mhc-text.open { max-height: 600px; }
+  .mhc-text.open {
+    max-height: 9999px;
+    padding: 0.9rem 0.9rem 1.1rem;
+  }
 
   .mhc-load-more {
     font-family: 'Cinzel', serif;
-    font-size: 0.62rem;
+    font-size: 0.55rem;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--gold);
+    color: var(--gold-mid);
     background: transparent;
-    border: 1px solid var(--rule);
+    border: 1px solid var(--parchment-border);
     padding: 0.5rem 1rem;
     cursor: pointer;
     display: block;
@@ -385,100 +501,116 @@
     text-align: center;
     transition: all 0.15s;
     margin-top: 0.5rem;
+    border-radius: 1px;
   }
-  .mhc-load-more:hover { background: var(--parch2); border-color: var(--gold); }
+  .mhc-load-more:hover {
+    background: var(--parchment-mid);
+    border-color: var(--gold-dim);
+    color: var(--gold-bright);
+  }
   .mhc-load-more:disabled { opacity: 0.3; cursor: default; }
 
   .mhc-note {
-    font-size: 0.82rem;
+    font-family: 'IM Fell English', Georgia, serif;
+    font-size: 0.8rem;
     font-style: italic;
-    opacity: 0.45;
-    margin-bottom: 0.8rem;
+    color: var(--ink-faint);
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.01em;
   }
 
-  /* ── Loading / status ── */
+  /* ── Loading screen ── */
   .loader {
     position: fixed; inset: 0;
-    background: var(--parch);
+    background: var(--parchment-deep);
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 1rem; z-index: 1000;
+    gap: 1.2rem; z-index: 1000;
     transition: opacity 0.4s;
   }
   .loader.hidden { opacity: 0; pointer-events: none; }
 
+  .loader-ornament {
+    color: var(--gold-bright);
+    font-size: 1.5rem;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
   .loader-title {
     font-family: 'Cinzel', serif;
-    font-size: 1.1rem;
-    letter-spacing: 0.2em;
-    color: var(--gold);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold-bright);
+    text-shadow: 0 0 20px rgba(212,168,67,0.4);
   }
 
   .loader-sub {
-    font-size: 0.9rem;
+    font-family: 'IM Fell English', Georgia, serif;
+    font-size: 0.85rem;
     font-style: italic;
-    opacity: 0.45;
+    color: var(--ink-faint);
+    letter-spacing: 0.05em;
   }
 
   .progress-bar {
-    width: 200px; height: 1px;
-    background: var(--rule);
+    width: 180px; height: 1px;
+    background: var(--parchment-border);
     position: relative; overflow: hidden;
   }
   .progress-bar::after {
     content: '';
     position: absolute; top: 0; left: -100%;
     width: 100%; height: 100%;
-    background: var(--gold);
-    animation: slide 1.2s ease-in-out infinite;
+    background: linear-gradient(90deg, transparent, var(--gold-bright), transparent);
+    animation: slide 1.4s ease-in-out infinite;
   }
   @keyframes slide { to { left: 100%; } }
 
-  /* ── Stub badge ── */
-  .stub-badge {
-    display: inline-block;
-    font-family: 'Cinzel', serif;
-    font-size: 0.55rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 0.15rem 0.4rem;
-    border: 1px solid var(--rule);
-    color: var(--ink);
-    opacity: 0.4;
-    vertical-align: middle;
-    margin-left: 0.5rem;
-  }
-
   /* ── Scrollbar ── */
   ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 0; }
+  ::-webkit-scrollbar-track { background: var(--parchment-dark); }
+  ::-webkit-scrollbar-thumb { background: var(--parchment-border); border-radius: 0; }
 
   /* ── Responsive ── */
   @media (max-width: 700px) {
     .layout { grid-template-columns: 1fr; }
-    .term-list { max-height: 35vh; position: static; border-right: none; border-bottom: 1px solid var(--rule); }
+    .term-list {
+      max-height: 35vh; position: static;
+      border-right: none;
+      border-bottom: 1px solid var(--parchment-border);
+    }
     .detail { padding: 1.5rem; max-height: none; }
   }
 </style>
 </head>
 <body>
 
+<div class="grain-overlay"></div>
+
 <div class="loader" id="loader">
+  <div class="loader-ornament">✦</div>
   <div class="loader-title">Character Study</div>
   <div class="progress-bar"></div>
   <div class="loader-sub" id="loader-status">Loading glossary…</div>
 </div>
 
 <header>
-  <div class="wordmark">Character Study <span>·</span> Bible Glossary</div>
-  <div class="search-wrap">
-    <span class="search-icon">⌕</span>
-    <input type="search" id="search" placeholder="Search terms, descriptions…" autocomplete="off">
+  <div class="header-rule">
+    <span class="header-ornament">✦</span>
+  </div>
+  <div class="header-top">
+    <div class="wordmark">Character Study <span class="sep">·</span> Bible Glossary</div>
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="search" id="search" placeholder="Search terms, descriptions…" autocomplete="off">
+    </div>
   </div>
 </header>
 
-<div class="filters" id="filters"></div>
+<div class="filter-bar" id="filters"></div>
 
 <div class="layout">
   <div class="term-list">
@@ -486,7 +618,7 @@
     <div id="term-list-inner"></div>
   </div>
   <div class="detail" id="detail">
-    <div class="detail-empty">Select a term to begin</div>
+    <div class="detail-empty">✦<br>Select a term to begin</div>
   </div>
 </div>
 
@@ -495,7 +627,25 @@
 const MHC_BASE = 'https://ntvckmpm42-ui.github.io/mhc';
 const DB_URL   = './bible_glossary.db';
 
-// SBL book abbreviations for verse_map lookup
+const SECTION_ACCENT = {
+  'Books of the Bible': '#C8A84B',
+  'OT People':          '#B87333',
+  'NT People':          '#7B9EC0',
+  'Places':             '#8B7355',
+  'Peoples & Groups':   '#A0845C',
+  'Theology & Doctrine':'#9B7FA6',
+};
+
+const SECTION_GLYPHS = {
+  'All':               '✦',
+  'Books of the Bible':'📜',
+  'OT People':         '⚔',
+  'NT People':         '✝',
+  'Places':            '⛰',
+  'Peoples & Groups':  '⚖',
+  'Theology & Doctrine':'☩',
+};
+
 const BOOK_TO_SBL = {
   'Genesis':'GEN','Exodus':'EXO','Leviticus':'LEV','Numbers':'NUM',
   'Deuteronomy':'DEU','Joshua':'JOS','Judges':'JDG','Ruth':'RUT',
@@ -516,7 +666,6 @@ const BOOK_TO_SBL = {
   '2 John':'2JN','3 John':'3JN','Jude':'JUD','Revelation':'REV',
 };
 
-// Book name → canonical slug for MHC URL
 const BOOK_TO_SLUG = {
   'Genesis':'genesis','Exodus':'exodus','Leviticus':'leviticus',
   'Numbers':'numbers','Deuteronomy':'deuteronomy','Joshua':'joshua',
@@ -661,11 +810,25 @@ function searchTerms(q) {
 
 // ── Filters ───────────────────────────────────────────────────────────────────
 function buildFilters() {
-  const sections = ['All', ...new Set(allTerms.map(t => t.section).filter(Boolean))];
+  const SECTION_ORDER = [
+    'All','Books of the Bible','OT People','NT People',
+    'Places','Peoples & Groups','Theology & Doctrine'
+  ];
+  const present = new Set(allTerms.map(t => t.section).filter(Boolean));
+  const sections = SECTION_ORDER.filter(s => s === 'All' || present.has(s));
+
   const wrap = document.getElementById('filters');
-  wrap.innerHTML = sections.map(s =>
-    `<button class="pill ${s === 'All' ? 'active' : ''}" data-section="${s}">${s}</button>`
-  ).join('');
+  wrap.innerHTML = sections.map((s, i) => {
+    const glyph = SECTION_GLYPHS[s] || '';
+    const sep = (i === 0) ? '<div class="filter-divider"></div>' : '';
+    const isSort = false;
+    return `${i === 1 ? '<div class="filter-divider"></div>' : ''}
+      <button class="pill ${s === 'All' ? 'active' : ''}" data-section="${s}"
+              style="${s !== 'All' ? `--pill-accent:${SECTION_ACCENT[s] || '#7a5820'}` : ''}">
+        ${glyph} ${s}
+      </button>`;
+  }).join('');
+
   wrap.addEventListener('click', e => {
     const pill = e.target.closest('.pill');
     if (!pill) return;
@@ -687,27 +850,31 @@ function applyFilters() {
 function renderList() {
   const inner = document.getElementById('term-list-inner');
   document.getElementById('term-count').textContent = `${filtered.length} terms`;
-  inner.innerHTML = filtered.map(t => `
-    <div class="term-item ${t.id === activeTermId ? 'active' : ''}"
-         data-id="${t.id}">
-      <span class="term-name">${t.term}</span>
-      <span class="term-cat">${shortSection(t.section)}</span>
-    </div>
-  `).join('');
+  inner.innerHTML = filtered.map(t => {
+    const accent = SECTION_ACCENT[t.section] || '#7a5820';
+    return `
+      <div class="term-item ${t.id === activeTermId ? 'active' : ''}"
+           data-id="${t.id}"
+           style="--section-accent: ${accent}">
+        <span class="term-name">${t.term}</span>
+        <span class="term-cat">${shortSection(t.section)}</span>
+      </div>
+    `;
+  }).join('');
+
   inner.addEventListener('click', e => {
     const item = e.target.closest('.term-item');
     if (!item) return;
-    const id = parseInt(item.dataset.id);
-    selectTerm(id);
+    selectTerm(parseInt(item.dataset.id));
   });
 }
 
 function shortSection(s) {
   if (!s) return '';
   const map = {
-    'OT People': 'OT', 'NT People': 'NT', 'Places': 'Place',
-    'Peoples & Groups': 'Group', 'Books of the Bible': 'Book',
-    'Theology & Doctrine': 'Doctrine'
+    'OT People':'OT','NT People':'NT','Places':'Place',
+    'Peoples & Groups':'Group','Books of the Bible':'Book',
+    'Theology & Doctrine':'Doctrine'
   };
   return map[s] || s;
 }
@@ -715,7 +882,6 @@ function shortSection(s) {
 // ── Term detail ───────────────────────────────────────────────────────────────
 function selectTerm(id) {
   activeTermId = id;
-  // Update list highlight
   document.querySelectorAll('.term-item').forEach(el => {
     el.classList.toggle('active', parseInt(el.dataset.id) === id);
   });
@@ -725,33 +891,49 @@ function selectTerm(id) {
 }
 
 function renderDetail(term) {
-  const rels = getRelationships(term.id);
-  const refs = getCrossRefs(term.id);
+  const rels  = getRelationships(term.id);
+  const refs  = getCrossRefs(term.id);
   const hasDetail = term.description || term.original_word || term.meaning_of_name;
+  const accent = SECTION_ACCENT[term.section] || '#a87c2a';
 
   const detail = document.getElementById('detail');
   detail.innerHTML = `
     <div class="term-header">
-      <div class="term-section-label">${term.section || ''}</div>
-      <div class="term-title">${term.term}${!hasDetail ? '<span class="stub-badge">stub</span>' : ''}</div>
+      <div class="term-section-label" style="color:${accent}">${term.section || ''}</div>
+      <div class="term-title">
+        ${term.term}${!hasDetail ? '<span class="stub-badge">stub</span>' : ''}
+      </div>
       <div class="term-meta">
         ${term.testament ? `<span>${term.testament}</span>` : ''}
         ${term.gender && term.gender !== 'unknown' ? `<span>${term.gender}</span>` : ''}
-        ${term.category ? `<span>${term.category.replace('_', ' ')}</span>` : ''}
+        ${term.category ? `<span>${term.category.replace('_',' ')}</span>` : ''}
       </div>
     </div>
 
     ${(term.meaning_of_name || term.original_word) ? `
     <div class="meaning-bar">
-      ${term.original_word ? `<div class="meaning-item"><label>Original word</label>${term.original_word}${term.original_language ? ' (' + term.original_language + ')' : ''}</div>` : ''}
-      ${term.meaning_of_name ? `<div class="meaning-item"><label>Meaning</label>${term.meaning_of_name}</div>` : ''}
-      ${term.first_book ? `<div class="meaning-item"><label>First appears</label>${term.first_book}${term.first_chapter ? ' ' + term.first_chapter : ''}${term.first_verse ? ':' + term.first_verse : ''}</div>` : ''}
+      ${term.original_word ? `
+        <div class="meaning-item">
+          <label>Original word</label>
+          <span>${term.original_word}${term.original_language ? ' (' + term.original_language + ')' : ''}</span>
+        </div>` : ''}
+      ${term.meaning_of_name ? `
+        <div class="meaning-item">
+          <label>Meaning</label>
+          <span>${term.meaning_of_name}</span>
+        </div>` : ''}
+      ${term.first_book ? `
+        <div class="meaning-item">
+          <label>First appears</label>
+          <span>${term.first_book}${term.first_chapter ? ' ' + term.first_chapter : ''}${term.first_verse ? ':' + term.first_verse : ''}</span>
+        </div>` : ''}
     </div>` : ''}
 
     ${term.description ? `<p class="description">${term.description}</p>` : ''}
 
     ${(term.lat && term.lon) ? `
-    <a class="map-link" href="https://www.google.com/maps?q=${term.lat},${term.lon}&z=10" target="_blank" rel="noopener noreferrer">
+    <a class="map-link" href="https://www.google.com/maps?q=${term.lat},${term.lon}&z=10"
+       target="_blank" rel="noopener noreferrer">
       🗺 View on Map
     </a>` : ''}
 
@@ -777,16 +959,14 @@ function renderDetail(term) {
     <hr class="rule">
     <div class="section-title">Matthew Henry's Commentary</div>
     <div id="mhc-zone">
-      <div class="mhc-note">Loading commentary…</div>
+      <p class="mhc-note">Loading commentary…</p>
     </div>
   `;
 
-  // Relationship chip clicks
   detail.querySelectorAll('.rel-chip, .crossref-chip').forEach(btn => {
     btn.addEventListener('click', () => selectTerm(parseInt(btn.dataset.id)));
   });
 
-  // Load MHC
   loadMHC(term);
 }
 
@@ -795,18 +975,14 @@ async function loadMHC(term) {
   const zone = document.getElementById('mhc-zone');
   if (!zone) return;
 
-  // Ensure index is loaded
   await ensureMHCIndex();
 
   let chunks = [];
   let noteText = '';
 
-  // Level 1: find sections for this book+chapter, then pick the best one by verse
   if (term.first_book && term.first_chapter) {
     const chapterSections = getMHCChapterSections(term.first_book, term.first_chapter);
-
     if (chapterSections.length) {
-      // If we have a verse, try to find the section whose verse range covers it
       let best = null;
       if (term.first_verse) {
         best = chapterSections.find(c =>
@@ -815,9 +991,7 @@ async function loadMHC(term) {
           c.verse_end >= term.first_verse
         );
       }
-      // Fall back to first section in the chapter
       if (!best) best = chapterSections[0];
-
       const fetched = await fetchMHCUrl(best.url);
       if (fetched) {
         chunks = [fetched];
@@ -828,14 +1002,11 @@ async function loadMHC(term) {
     }
   }
 
-  // Level 2: search section titles for the term name
   if (!chunks.length) {
     const nameMatches = getMHCNameMatches(term.term, 3);
     const fetched = await Promise.all(nameMatches.map(c => fetchMHCUrl(c.url)));
     chunks = fetched.filter(Boolean);
-    if (chunks.length) {
-      noteText = `Commentary sections mentioning "${term.term}"`;
-    }
+    if (chunks.length) noteText = `Commentary sections mentioning "${term.term}"`;
   }
 
   if (chunks.length) {
@@ -849,9 +1020,8 @@ async function loadMHC(term) {
     `;
   } else {
     zone.innerHTML = `
-      <p class="mhc-note">No commentary found for ${term.term}.
-        <button class="mhc-load-more" style="display:inline;width:auto;border:none;padding:0" id="mhc-more">Search commentary →</button>
-      </p>
+      <p class="mhc-note">No commentary found for ${term.term}.</p>
+      <button class="mhc-load-more" id="mhc-more">Search commentary →</button>
       <div id="mhc-more-zone"></div>
     `;
   }
@@ -860,7 +1030,7 @@ async function loadMHC(term) {
   attachMHCToggles();
 }
 
-// ── MHC Index cache ───────────────────────────────────────────────────────────
+// ── MHC index cache ───────────────────────────────────────────────────────────
 let mhcIndex = null;
 
 async function ensureMHCIndex() {
@@ -903,7 +1073,7 @@ async function fetchMHCUrl(url) {
 }
 
 async function loadMoreMHC(term) {
-  const btn = document.getElementById('mhc-more');
+  const btn      = document.getElementById('mhc-more');
   const moreZone = document.getElementById('mhc-more-zone');
   if (!btn || !moreZone) return;
 
@@ -912,8 +1082,6 @@ async function loadMoreMHC(term) {
 
   try {
     await ensureMHCIndex();
-
-    // Search section titles for the term name, use url field directly
     const matches = getMHCNameMatches(term.term, 8);
 
     if (!matches.length) {
@@ -923,7 +1091,7 @@ async function loadMoreMHC(term) {
     }
 
     const chunks = await Promise.all(matches.map(m => fetchMHCUrl(m.url)));
-    const valid = chunks.filter(Boolean);
+    const valid  = chunks.filter(Boolean);
 
     if (!valid.length) {
       moreZone.innerHTML = `<p class="mhc-note">Could not load additional sections.</p>`;
@@ -944,10 +1112,10 @@ async function loadMoreMHC(term) {
 }
 
 function renderMHCBlock(chunk) {
-  const ref = chunk.reference || `${chunk.book_name} ${chunk.chapter}:${chunk.verse_start}`;
+  const ref   = chunk.reference || `${chunk.book_name} ${chunk.chapter}:${chunk.verse_start}`;
   const title = chunk.section_title || '';
-  const text = (chunk.text || '').replace(/\n/g, '<br>');
-  const id = `mhc-${chunk.id}`;
+  const text  = (chunk.text || '').replace(/\n/g, '<br>');
+  const id    = `mhc-${chunk.id}`;
   return `
     <div class="mhc-block">
       <div class="mhc-header" data-target="${id}">
@@ -964,9 +1132,12 @@ function renderMHCBlock(chunk) {
 
 function attachMHCToggles() {
   document.querySelectorAll('.mhc-header').forEach(header => {
-    header.addEventListener('click', () => {
-      const targetId = header.dataset.target;
-      const text = document.getElementById(targetId);
+    // Remove old listeners by cloning
+    const fresh = header.cloneNode(true);
+    header.parentNode.replaceChild(fresh, header);
+    fresh.addEventListener('click', () => {
+      const targetId = fresh.dataset.target;
+      const text   = document.getElementById(targetId);
       const toggle = document.getElementById('toggle-' + targetId);
       if (!text) return;
       text.classList.toggle('open');
@@ -974,19 +1145,19 @@ function attachMHCToggles() {
     });
   });
   // Auto-open first block
-  const first = document.querySelector('.mhc-text');
+  const first  = document.querySelector('.mhc-text');
+  const toggle = document.querySelector('.mhc-toggle');
   if (first && !first.classList.contains('open')) {
     first.classList.add('open');
-    const toggle = document.querySelector('.mhc-toggle');
     toggle?.classList.add('open');
   }
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
 let searchTimer;
-document.getElementById('search').addEventListener('input', e => {
+document.getElementById('search').addEventListener('input', () => {
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => applyFilters(), 200);
+  searchTimer = setTimeout(applyFilters, 200);
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
