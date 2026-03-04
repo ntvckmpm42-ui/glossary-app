@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bible Glossary — Character Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel:wght@400;600&family=Source+Code+Pro:wght@400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<style>
+  :root {
+    --ink:       #1a1410;
+    --parch:     #f5f0e8;
+    --parch2:    #ede7d9;
+    --gold:      #9a7a3a;
+    --gold-lt:   #c4a45a;
+    --rust:      #7a3a2a;
+    --sage:      #4a6a5a;
+    --rule:      rgba(154,122,58,0.25);
+    --shadow:    rgba(26,20,16,0.12);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { font-size: 16px; scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    background: var(--parch);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Grain overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; opacity: 0.4;
+  }
+
+  /* ── Header ── */
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding: 2rem 2.5rem 1.5rem;
+    display: flex; align-items: baseline; gap: 2rem;
+    flex-wrap: wrap;
+    background: linear-gradient(180deg, var(--parch2) 0%, var(--parch) 100%);
+  }
+
+  .wordmark {
+    font-family: 'Cinzel', serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .wordmark span {
+    color: var(--ink);
+    opacity: 0.4;
+    font-weight: 400;
+    margin: 0 0.4em;
+  }
+
+  /* ── Search bar ── */
+  .search-wrap {
+    flex: 1; min-width: 220px; position: relative;
+  }
+
+  #search {
+    width: 100%;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule);
+    padding: 0.3rem 0.3rem 0.3rem 1.6rem;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  #search:focus { border-color: var(--gold); }
+  #search::placeholder { color: var(--ink); opacity: 0.35; font-style: italic; }
+
+  .search-icon {
+    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    opacity: 0.35; font-size: 0.85rem;
+  }
+
+  /* ── Filter pills ── */
+  .filters {
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+    padding: 0.9rem 2.5rem;
+    border-bottom: 1px solid var(--rule);
+    background: var(--parch);
+  }
+
+  .pill {
+    font-family: 'Cinzel', serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--rule);
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    opacity: 0.55;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pill:hover { opacity: 0.85; border-color: var(--gold); }
+  .pill.active { background: var(--gold); border-color: var(--gold); color: var(--parch); opacity: 1; }
+
+  /* ── Layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: calc(100vh - 120px);
+  }
+
+  /* ── Term list ── */
+  .term-list {
+    border-right: 1px solid var(--rule);
+    overflow-y: auto;
+    max-height: calc(100vh - 120px);
+    position: sticky; top: 0;
+  }
+
+  .term-count {
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    padding: 0.8rem 1.2rem 0.5rem;
+    border-bottom: 1px solid var(--rule);
+    opacity: 0.7;
+  }
+
+  .term-item {
+    padding: 0.7rem 1.2rem;
+    cursor: pointer;
+    border-bottom: 1px solid transparent;
+    transition: all 0.12s;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .term-item:hover { background: var(--parch2); }
+  .term-item.active { background: var(--ink); color: var(--parch); }
+  .term-item.active .term-cat { color: var(--gold-lt); }
+
+  .term-name {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.3;
+  }
+
+  .term-cat {
+    font-family: 'Cinzel', serif;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.45;
+    white-space: nowrap;
+    margin-left: 0.5rem;
+  }
+
+  /* ── Detail panel ── */
+  .detail {
+    padding: 2.5rem 3rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 120px);
+  }
+
+  .detail-empty {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%;
+    font-size: 1.1rem;
+    font-style: italic;
+    opacity: 0.3;
+    text-align: center;
+    line-height: 2;
+  }
+
+  /* ── Term header ── */
+  .term-header { margin-bottom: 2rem; }
+
+  .term-section-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.5rem;
+  }
+
+  .term-title {
+    font-family: 'Cinzel', serif;
+    font-size: 2.2rem;
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.4rem;
+  }
+
+  .term-meta {
+    font-size: 0.9rem;
+    font-style: italic;
+    opacity: 0.5;
+    display: flex; gap: 1rem; flex-wrap: wrap;
+  }
+
+  .term-meta span::before { content: '· '; }
+  .term-meta span:first-child::before { content: ''; }
+
+  /* ── Divider ── */
+  .rule {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 1.8rem 0;
+  }
+
+  /* ── Meaning bar ── */
+  .meaning-bar {
+    display: flex; gap: 2rem; flex-wrap: wrap;
+    padding: 1rem 1.2rem;
+    background: var(--parch2);
+    border-left: 2px solid var(--gold);
+    margin-bottom: 1.8rem;
+    font-size: 0.95rem;
+  }
+
+  .meaning-item label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.58rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.45;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+
+  /* ── Description ── */
+  .description {
+    font-size: 1.1rem;
+    line-height: 1.85;
+    max-width: 62ch;
+  }
+
+  /* ── Relationships ── */
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.9rem;
+  }
+
+  .rel-grid {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .rel-chip {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--rule);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.12s;
+    background: transparent;
+    color: var(--ink);
+    font-family: inherit;
+  }
+  .rel-chip:hover { border-color: var(--gold); background: var(--parch2); }
+
+  .rel-type {
+    font-family: 'Cinzel', serif;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  /* ── Cross-refs ── */
+  .crossref-list {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+  }
+
+  .crossref-chip {
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--rule);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.12s;
+    background: transparent;
+    color: var(--ink);
+    font-family: inherit;
+    font-style: italic;
+  }
+  .crossref-chip:hover { border-color: var(--rust); color: var(--rust); }
+
+  /* ── MHC Commentary ── */
+  .mhc-block {
+    background: var(--parch2);
+    border: 1px solid var(--rule);
+    margin-bottom: 0.8rem;
+    overflow: hidden;
+  }
+
+  .mhc-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--rule);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .mhc-header:hover { background: rgba(154,122,58,0.06); }
+
+  .mhc-ref {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+  }
+
+  .mhc-section-title {
+    font-size: 0.9rem;
+    font-style: italic;
+    opacity: 0.65;
+  }
+
+  .mhc-toggle {
+    font-size: 0.75rem;
+    opacity: 0.35;
+    transition: transform 0.2s;
+  }
+  .mhc-toggle.open { transform: rotate(180deg); }
+
+  .mhc-text {
+    padding: 1rem 1rem 1.2rem;
+    font-size: 0.95rem;
+    line-height: 1.8;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s;
+  }
+  .mhc-text.open { max-height: 600px; }
+
+  .mhc-load-more {
+    font-family: 'Cinzel', serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: transparent;
+    border: 1px solid var(--rule);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    text-align: center;
+    transition: all 0.15s;
+    margin-top: 0.5rem;
+  }
+  .mhc-load-more:hover { background: var(--parch2); border-color: var(--gold); }
+  .mhc-load-more:disabled { opacity: 0.3; cursor: default; }
+
+  .mhc-note {
+    font-size: 0.82rem;
+    font-style: italic;
+    opacity: 0.45;
+    margin-bottom: 0.8rem;
+  }
+
+  /* ── Loading / status ── */
+  .loader {
+    position: fixed; inset: 0;
+    background: var(--parch);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 1rem; z-index: 1000;
+    transition: opacity 0.4s;
+  }
+  .loader.hidden { opacity: 0; pointer-events: none; }
+
+  .loader-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+  }
+
+  .loader-sub {
+    font-size: 0.9rem;
+    font-style: italic;
+    opacity: 0.45;
+  }
+
+  .progress-bar {
+    width: 200px; height: 1px;
+    background: var(--rule);
+    position: relative; overflow: hidden;
+  }
+  .progress-bar::after {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: var(--gold);
+    animation: slide 1.2s ease-in-out infinite;
+  }
+  @keyframes slide { to { left: 100%; } }
+
+  /* ── Stub badge ── */
+  .stub-badge {
+    display: inline-block;
+    font-family: 'Cinzel', serif;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.4rem;
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    opacity: 0.4;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 0; }
+
+  /* ── Responsive ── */
+  @media (max-width: 700px) {
+    .layout { grid-template-columns: 1fr; }
+    .term-list { max-height: 35vh; position: static; border-right: none; border-bottom: 1px solid var(--rule); }
+    .detail { padding: 1.5rem; max-height: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loader" id="loader">
+  <div class="loader-title">Character Study</div>
+  <div class="progress-bar"></div>
+  <div class="loader-sub" id="loader-status">Loading glossary…</div>
+</div>
+
+<header>
+  <div class="wordmark">Character Study <span>·</span> Bible Glossary</div>
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input type="search" id="search" placeholder="Search terms, descriptions…" autocomplete="off">
+  </div>
+</header>
+
+<div class="filters" id="filters"></div>
+
+<div class="layout">
+  <div class="term-list">
+    <div class="term-count" id="term-count"></div>
+    <div id="term-list-inner"></div>
+  </div>
+  <div class="detail" id="detail">
+    <div class="detail-empty">Select a term to begin</div>
+  </div>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const MHC_BASE = 'https://ntvckmpm42-ui.github.io/mhc';
+const DB_URL   = './bible_glossary.db';
+
+// SBL book abbreviations for verse_map lookup
+const BOOK_TO_SBL = {
+  'Genesis':'GEN','Exodus':'EXO','Leviticus':'LEV','Numbers':'NUM',
+  'Deuteronomy':'DEU','Joshua':'JOS','Judges':'JDG','Ruth':'RUT',
+  '1 Samuel':'1SA','2 Samuel':'2SA','1 Kings':'1KI','2 Kings':'2KI',
+  '1 Chronicles':'1CH','2 Chronicles':'2CH','Ezra':'EZR','Nehemiah':'NEH',
+  'Esther':'EST','Job':'JOB','Psalms':'PSA','Proverbs':'PRO',
+  'Ecclesiastes':'ECC','Song of Solomon':'SNG','Isaiah':'ISA',
+  'Jeremiah':'JER','Lamentations':'LAM','Ezekiel':'EZK','Daniel':'DAN',
+  'Hosea':'HOS','Joel':'JOL','Amos':'AMO','Obadiah':'OBA','Jonah':'JON',
+  'Micah':'MIC','Nahum':'NAH','Habakkuk':'HAB','Zephaniah':'ZEP',
+  'Haggai':'HAG','Zechariah':'ZEC','Malachi':'MAL','Matthew':'MAT',
+  'Mark':'MRK','Luke':'LUK','John':'JHN','Acts':'ACT','Romans':'ROM',
+  '1 Corinthians':'1CO','2 Corinthians':'2CO','Galatians':'GAL',
+  'Ephesians':'EPH','Philippians':'PHP','Colossians':'COL',
+  '1 Thessalonians':'1TH','2 Thessalonians':'2TH','1 Timothy':'1TI',
+  '2 Timothy':'2TI','Titus':'TIT','Philemon':'PHM','Hebrews':'HEB',
+  'James':'JAS','1 Peter':'1PE','2 Peter':'2PE','1 John':'1JN',
+  '2 John':'2JN','3 John':'3JN','Jude':'JUD','Revelation':'REV',
+};
+
+// Book name → canonical slug for MHC URL
+const BOOK_TO_SLUG = {
+  'Genesis':'genesis','Exodus':'exodus','Leviticus':'leviticus',
+  'Numbers':'numbers','Deuteronomy':'deuteronomy','Joshua':'joshua',
+  'Judges':'judges','Ruth':'ruth','1 Samuel':'1-samuel','2 Samuel':'2-samuel',
+  '1 Kings':'1-kings','2 Kings':'2-kings','1 Chronicles':'1-chronicles',
+  '2 Chronicles':'2-chronicles','Ezra':'ezra','Nehemiah':'nehemiah',
+  'Esther':'esther','Job':'job','Psalms':'psalms','Proverbs':'proverbs',
+  'Ecclesiastes':'ecclesiastes','Song of Solomon':'song-of-solomon',
+  'Isaiah':'isaiah','Jeremiah':'jeremiah','Lamentations':'lamentations',
+  'Ezekiel':'ezekiel','Daniel':'daniel','Hosea':'hosea','Joel':'joel',
+  'Amos':'amos','Obadiah':'obadiah','Jonah':'jonah','Micah':'micah',
+  'Nahum':'nahum','Habakkuk':'habakkuk','Zephaniah':'zephaniah',
+  'Haggai':'haggai','Zechariah':'zechariah','Malachi':'malachi',
+  'Matthew':'matthew','Mark':'mark','Luke':'luke','John':'john',
+  'Acts':'acts','Romans':'romans','1 Corinthians':'1-corinthians',
+  '2 Corinthians':'2-corinthians','Galatians':'galatians',
+  'Ephesians':'ephesians','Philippians':'philippians','Colossians':'colossians',
+  '1 Thessalonians':'1-thessalonians','2 Thessalonians':'2-thessalonians',
+  '1 Timothy':'1-timothy','2 Timothy':'2-timothy','Titus':'titus',
+  'Philemon':'philemon','Hebrews':'hebrews','James':'james',
+  '1 Peter':'1-peter','2 Peter':'2-peter','1 John':'1-john',
+  '2 John':'2-john','3 John':'3-john','Jude':'jude','Revelation':'revelation',
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let DB = null;
+let allTerms = [];
+let filtered = [];
+let activeSection = 'All';
+let activeTermId = null;
+let verseMap = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  setStatus('Initialising sql.js…');
+  const SQL = await initSqlJs({
+    locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/${f}`
+  });
+
+  setStatus('Loading glossary database…');
+  const resp = await fetch(DB_URL);
+  if (!resp.ok) throw new Error(`Could not load ${DB_URL}: ${resp.status}`);
+  const buf = await resp.arrayBuffer();
+  DB = new SQL.Database(new Uint8Array(buf));
+
+  setStatus('Loading verse map…');
+  try {
+    const vm = await fetch(`${MHC_BASE}/verse_map.json`);
+    verseMap = await vm.json();
+  } catch(e) { verseMap = {}; }
+
+  setStatus('Ready');
+  loadTerms();
+  buildFilters();
+  renderList();
+  hideLoader();
+}
+
+function setStatus(msg) {
+  document.getElementById('loader-status').textContent = msg;
+}
+
+function hideLoader() {
+  const l = document.getElementById('loader');
+  l.classList.add('hidden');
+  setTimeout(() => l.remove(), 500);
+}
+
+// ── DB queries ────────────────────────────────────────────────────────────────
+function query(sql, params = []) {
+  const stmt = DB.prepare(sql);
+  stmt.bind(params);
+  const rows = [];
+  while (stmt.step()) rows.push(stmt.getAsObject());
+  stmt.free();
+  return rows;
+}
+
+function loadTerms() {
+  allTerms = query(`
+    SELECT t.id, t.term, t.section, t.category, t.gender, t.testament,
+           d.description, d.original_word, d.original_language,
+           d.meaning_of_name, d.first_book, d.first_chapter, d.first_verse
+    FROM terms t
+    LEFT JOIN term_detail d ON d.term_id = t.id
+    ORDER BY t.term
+  `);
+  filtered = [...allTerms];
+}
+
+function getRelationships(termId) {
+  return query(`
+    SELECT r.rel_type, r.notes,
+           t.term AS other_term, t.id AS other_id,
+           'out' AS direction
+    FROM relationships r
+    JOIN terms t ON t.id = r.to_term_id
+    WHERE r.from_term_id = ?
+    UNION ALL
+    SELECT r.rel_type, r.notes,
+           t.term AS other_term, t.id AS other_id,
+           'in' AS direction
+    FROM relationships r
+    JOIN terms t ON t.id = r.from_term_id
+    WHERE r.to_term_id = ?
+    ORDER BY rel_type
+  `, [termId, termId]);
+}
+
+function getCrossRefs(termId) {
+  return query(`
+    SELECT t.term, t.id
+    FROM cross_refs cr
+    JOIN terms t ON t.id = cr.to_term_id
+    WHERE cr.from_term_id = ?
+    UNION
+    SELECT t.term, t.id
+    FROM cross_refs cr
+    JOIN terms t ON t.id = cr.from_term_id
+    WHERE cr.to_term_id = ?
+    ORDER BY t.term
+  `, [termId, termId]);
+}
+
+function searchTerms(q) {
+  if (!q.trim()) return [...allTerms];
+  try {
+    return query(`
+      SELECT t.id, t.term, t.section, t.category, t.gender, t.testament,
+             d.description, d.original_word, d.original_language,
+             d.meaning_of_name, d.first_book, d.first_chapter, d.first_verse
+      FROM terms_fts
+      JOIN terms t ON t.rowid = terms_fts.rowid
+      LEFT JOIN term_detail d ON d.term_id = t.id
+      WHERE terms_fts MATCH ?
+      ORDER BY rank
+    `, [q + '*']);
+  } catch(e) { return []; }
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+function buildFilters() {
+  const sections = ['All', ...new Set(allTerms.map(t => t.section).filter(Boolean))];
+  const wrap = document.getElementById('filters');
+  wrap.innerHTML = sections.map(s =>
+    `<button class="pill ${s === 'All' ? 'active' : ''}" data-section="${s}">${s}</button>`
+  ).join('');
+  wrap.addEventListener('click', e => {
+    const pill = e.target.closest('.pill');
+    if (!pill) return;
+    activeSection = pill.dataset.section;
+    wrap.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    applyFilters();
+  });
+}
+
+function applyFilters() {
+  const q = document.getElementById('search').value;
+  let base = q ? searchTerms(q) : [...allTerms];
+  filtered = activeSection === 'All' ? base : base.filter(t => t.section === activeSection);
+  renderList();
+}
+
+// ── Term list ─────────────────────────────────────────────────────────────────
+function renderList() {
+  const inner = document.getElementById('term-list-inner');
+  document.getElementById('term-count').textContent = `${filtered.length} terms`;
+  inner.innerHTML = filtered.map(t => `
+    <div class="term-item ${t.id === activeTermId ? 'active' : ''}"
+         data-id="${t.id}">
+      <span class="term-name">${t.term}</span>
+      <span class="term-cat">${shortSection(t.section)}</span>
+    </div>
+  `).join('');
+  inner.addEventListener('click', e => {
+    const item = e.target.closest('.term-item');
+    if (!item) return;
+    const id = parseInt(item.dataset.id);
+    selectTerm(id);
+  });
+}
+
+function shortSection(s) {
+  if (!s) return '';
+  const map = {
+    'OT People': 'OT', 'NT People': 'NT', 'Places': 'Place',
+    'Peoples & Groups': 'Group', 'Books of the Bible': 'Book',
+    'Theology & Doctrine': 'Doctrine'
+  };
+  return map[s] || s;
+}
+
+// ── Term detail ───────────────────────────────────────────────────────────────
+function selectTerm(id) {
+  activeTermId = id;
+  // Update list highlight
+  document.querySelectorAll('.term-item').forEach(el => {
+    el.classList.toggle('active', parseInt(el.dataset.id) === id);
+  });
+  const term = allTerms.find(t => t.id === id);
+  if (!term) return;
+  renderDetail(term);
+}
+
+function renderDetail(term) {
+  const rels = getRelationships(term.id);
+  const refs = getCrossRefs(term.id);
+  const hasDetail = term.description || term.original_word || term.meaning_of_name;
+
+  const detail = document.getElementById('detail');
+  detail.innerHTML = `
+    <div class="term-header">
+      <div class="term-section-label">${term.section || ''}</div>
+      <div class="term-title">${term.term}${!hasDetail ? '<span class="stub-badge">stub</span>' : ''}</div>
+      <div class="term-meta">
+        ${term.testament ? `<span>${term.testament}</span>` : ''}
+        ${term.gender && term.gender !== 'unknown' ? `<span>${term.gender}</span>` : ''}
+        ${term.category ? `<span>${term.category.replace('_', ' ')}</span>` : ''}
+      </div>
+    </div>
+
+    ${(term.meaning_of_name || term.original_word) ? `
+    <div class="meaning-bar">
+      ${term.original_word ? `<div class="meaning-item"><label>Original word</label>${term.original_word}${term.original_language ? ' (' + term.original_language + ')' : ''}</div>` : ''}
+      ${term.meaning_of_name ? `<div class="meaning-item"><label>Meaning</label>${term.meaning_of_name}</div>` : ''}
+      ${term.first_book ? `<div class="meaning-item"><label>First appears</label>${term.first_book}${term.first_chapter ? ' ' + term.first_chapter : ''}${term.first_verse ? ':' + term.first_verse : ''}</div>` : ''}
+    </div>` : ''}
+
+    ${term.description ? `<p class="description">${term.description}</p>` : ''}
+
+    ${rels.length ? `
+    <hr class="rule">
+    <div class="section-title">Relationships</div>
+    <div class="rel-grid">
+      ${rels.map(r => `
+        <button class="rel-chip" data-id="${r.other_id}">
+          <span class="rel-type">${r.rel_type.replace(/_/g,' ')}</span>
+          ${r.other_term}
+        </button>
+      `).join('')}
+    </div>` : ''}
+
+    ${refs.length ? `
+    <hr class="rule">
+    <div class="section-title">See also</div>
+    <div class="crossref-list">
+      ${refs.map(r => `<button class="crossref-chip" data-id="${r.id}">${r.term}</button>`).join('')}
+    </div>` : ''}
+
+    <hr class="rule">
+    <div class="section-title">Matthew Henry's Commentary</div>
+    <div id="mhc-zone">
+      <div class="mhc-note">Loading commentary…</div>
+    </div>
+  `;
+
+  // Relationship chip clicks
+  detail.querySelectorAll('.rel-chip, .crossref-chip').forEach(btn => {
+    btn.addEventListener('click', () => selectTerm(parseInt(btn.dataset.id)));
+  });
+
+  // Load MHC
+  loadMHC(term);
+}
+
+// ── MHC Commentary ────────────────────────────────────────────────────────────
+async function loadMHC(term) {
+  const zone = document.getElementById('mhc-zone');
+  if (!zone) return;
+
+  // Primary: fetch the section for the term's first appearance
+  let primaryChunk = null;
+  if (term.first_book && term.first_chapter && term.first_verse) {
+    primaryChunk = await fetchMHCVerse(term.first_book, term.first_chapter, term.first_verse);
+  }
+
+  // Secondary: search for more sections via FTS on the term name
+  // We use the chapter index files we already have
+  // For now show the primary and offer "see more" which searches by term name across books
+  if (primaryChunk) {
+    zone.innerHTML = `
+      <p class="mhc-note">Commentary on ${term.term}'s first appearance — ${term.first_book} ${term.first_chapter}:${term.first_verse}</p>
+      ${renderMHCBlock(primaryChunk)}
+      <button class="mhc-load-more" id="mhc-more">
+        See more commentary mentioning ${term.term} ↓
+      </button>
+      <div id="mhc-more-zone"></div>
+    `;
+    document.getElementById('mhc-more')?.addEventListener('click', () => loadMoreMHC(term));
+  } else if (term.first_book) {
+    zone.innerHTML = `
+      <p class="mhc-note">No verse-level match found. Showing chapter commentary for ${term.first_book} ${term.first_chapter || ''}.</p>
+      <button class="mhc-load-more" id="mhc-more">
+        Find commentary mentioning ${term.term} ↓
+      </button>
+      <div id="mhc-more-zone"></div>
+    `;
+    document.getElementById('mhc-more')?.addEventListener('click', () => loadMoreMHC(term));
+  } else {
+    zone.innerHTML = `<p class="mhc-note">No first appearance recorded for this term. <button class="mhc-load-more" style="display:inline;width:auto;border:none;padding:0" id="mhc-more">Search commentary →</button></p><div id="mhc-more-zone"></div>`;
+    document.getElementById('mhc-more')?.addEventListener('click', () => loadMoreMHC(term));
+  }
+
+  // Attach toggle listeners
+  attachMHCToggles();
+}
+
+async function fetchMHCVerse(book, chapter, verse) {
+  const slug = BOOK_TO_SLUG[book];
+  if (!slug) return null;
+  try {
+    const url = `${MHC_BASE}/commentary/${slug}/${chapter}/${verse}.json`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data.results?.[0] || null;
+  } catch(e) { return null; }
+}
+
+async function loadMoreMHC(term) {
+  const btn = document.getElementById('mhc-more');
+  const moreZone = document.getElementById('mhc-more-zone');
+  if (!btn || !moreZone) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Searching…';
+
+  // Find all verse_map keys whose section URLs we can fetch
+  // Strategy: search verse_map for known first appearances of related terms,
+  // then fetch the full index and filter by term name in section_title
+  try {
+    const indexResp = await fetch(`${MHC_BASE}/index.json`);
+    const index = await indexResp.json();
+
+    // Search section titles for the term name (case-insensitive)
+    const termLower = term.term.toLowerCase();
+    const matches = index.chunks.filter(c =>
+      c.chunk_type === 'section' &&
+      c.section_title && c.section_title.toLowerCase().includes(termLower)
+    ).slice(0, 8);
+
+    if (!matches.length) {
+      moreZone.innerHTML = `<p class="mhc-note">No additional sections found with "${term.term}" in the title.</p>`;
+      btn.textContent = 'No more results';
+      return;
+    }
+
+    // Fetch each matching chunk
+    const chunks = await Promise.all(matches.map(async m => {
+      const slug = BOOK_TO_SLUG[m.book_name];
+      if (!slug) return null;
+      const vs = m.verse_start, ve = m.verse_end;
+      const filename = (vs && ve && vs !== ve) ? `${vs}-${ve}` : vs;
+      if (!filename) return null;
+      try {
+        const r = await fetch(`${MHC_BASE}/commentary/${slug}/${m.chapter}/${filename}.json`);
+        const d = await r.json();
+        return d.results?.[0] || null;
+      } catch(e) { return null; }
+    }));
+
+    const valid = chunks.filter(Boolean);
+    if (!valid.length) {
+      moreZone.innerHTML = `<p class="mhc-note">Could not load additional sections.</p>`;
+    } else {
+      moreZone.innerHTML = `
+        <p class="mhc-note">${valid.length} section${valid.length !== 1 ? 's' : ''} with "${term.term}" in the title</p>
+        ${valid.map(renderMHCBlock).join('')}
+      `;
+      attachMHCToggles();
+    }
+
+    btn.textContent = `${valid.length} result${valid.length !== 1 ? 's' : ''} found`;
+  } catch(e) {
+    moreZone.innerHTML = `<p class="mhc-note">Could not load index. Check your connection.</p>`;
+    btn.disabled = false;
+    btn.textContent = 'Retry';
+  }
+}
+
+function renderMHCBlock(chunk) {
+  const ref = chunk.reference || `${chunk.book_name} ${chunk.chapter}:${chunk.verse_start}`;
+  const title = chunk.section_title || '';
+  const text = (chunk.text || '').replace(/\n/g, '<br>');
+  const id = `mhc-${chunk.id}`;
+  return `
+    <div class="mhc-block">
+      <div class="mhc-header" data-target="${id}">
+        <div>
+          <div class="mhc-ref">${ref}</div>
+          <div class="mhc-section-title">${title}</div>
+        </div>
+        <span class="mhc-toggle" id="toggle-${id}">▾</span>
+      </div>
+      <div class="mhc-text" id="${id}">${text}</div>
+    </div>
+  `;
+}
+
+function attachMHCToggles() {
+  document.querySelectorAll('.mhc-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const targetId = header.dataset.target;
+      const text = document.getElementById(targetId);
+      const toggle = document.getElementById('toggle-' + targetId);
+      if (!text) return;
+      text.classList.toggle('open');
+      toggle?.classList.toggle('open');
+    });
+  });
+  // Auto-open first block
+  const first = document.querySelector('.mhc-text');
+  if (first && !first.classList.contains('open')) {
+    first.classList.add('open');
+    const toggle = document.querySelector('.mhc-toggle');
+    toggle?.classList.add('open');
+  }
+}
+
+// ── Search ────────────────────────────────────────────────────────────────────
+let searchTimer;
+document.getElementById('search').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => applyFilters(), 200);
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+init().catch(err => {
+  document.getElementById('loader-status').textContent = 'Error: ' + err.message;
+  console.error(err);
+});
+</script>
+</body>
+</html>
