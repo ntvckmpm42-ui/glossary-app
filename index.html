@@ -770,36 +770,45 @@ async function loadMHC(term) {
   const zone = document.getElementById('mhc-zone');
   if (!zone) return;
 
+  // Ensure index is loaded
+  await ensureMHCIndex();
+
   let chunks = [];
-  let matchLevel = 'none';
   let noteText = '';
 
-  const slug = term.first_book ? BOOK_TO_SLUG[term.first_book] : null;
+  // Level 1: find sections for this book+chapter, then pick the best one by verse
+  if (term.first_book && term.first_chapter) {
+    const chapterSections = getMHCChapterSections(term.first_book, term.first_chapter);
 
-  // Level 1: exact verse JSON file
-  if (slug && term.first_chapter && term.first_verse) {
-    const result = await fetchMHCVerse(slug, term.first_chapter, term.first_verse);
-    if (result) {
-      chunks = [result];
-      matchLevel = 'verse';
-      noteText = `Commentary on ${term.term}'s first appearance — ${term.first_book} ${term.first_chapter}:${term.first_verse}`;
+    if (chapterSections.length) {
+      // If we have a verse, try to find the section whose verse range covers it
+      let best = null;
+      if (term.first_verse) {
+        best = chapterSections.find(c =>
+          c.verse_start != null &&
+          c.verse_start <= term.first_verse &&
+          c.verse_end >= term.first_verse
+        );
+      }
+      // Fall back to first section in the chapter
+      if (!best) best = chapterSections[0];
+
+      const fetched = await fetchMHCUrl(best.url);
+      if (fetched) {
+        chunks = [fetched];
+        noteText = term.first_verse
+          ? `Commentary on ${term.term}'s first appearance — ${term.first_book} ${term.first_chapter}:${term.first_verse}`
+          : `Chapter commentary for ${term.first_book} ${term.first_chapter}`;
+      }
     }
   }
 
-  // Level 2: chapter index (all sections for that chapter)
-  if (!chunks.length && slug && term.first_chapter) {
-    chunks = await fetchMHCChapter(slug, term.first_chapter);
-    if (chunks.length) {
-      matchLevel = 'chapter';
-      noteText = `Chapter commentary for ${term.first_book} ${term.first_chapter}`;
-    }
-  }
-
-  // Level 3: search index.json for term name in section titles
+  // Level 2: search section titles for the term name
   if (!chunks.length) {
-    chunks = await fetchMHCByName(term.term);
+    const nameMatches = getMHCNameMatches(term.term, 3);
+    const fetched = await Promise.all(nameMatches.map(c => fetchMHCUrl(c.url)));
+    chunks = fetched.filter(Boolean);
     if (chunks.length) {
-      matchLevel = 'name';
       noteText = `Commentary sections mentioning "${term.term}"`;
     }
   }
@@ -815,7 +824,7 @@ async function loadMHC(term) {
     `;
   } else {
     zone.innerHTML = `
-      <p class="mhc-note">No commentary found for ${term.first_book ? term.first_book + (term.first_chapter ? ' ' + term.first_chapter : '') : term.term}.
+      <p class="mhc-note">No commentary found for ${term.term}.
         <button class="mhc-load-more" style="display:inline;width:auto;border:none;padding:0" id="mhc-more">Search commentary →</button>
       </p>
       <div id="mhc-more-zone"></div>
@@ -826,81 +835,46 @@ async function loadMHC(term) {
   attachMHCToggles();
 }
 
-async function fetchMHCVerse(slug, chapter, verse) {
+// ── MHC Index cache ───────────────────────────────────────────────────────────
+let mhcIndex = null;
+
+async function ensureMHCIndex() {
+  if (mhcIndex) return;
   try {
-    const url = `${MHC_BASE}/commentary/${slug}/${chapter}/${verse}.json`;
+    const r = await fetch(`${MHC_BASE}/index.json`);
+    if (r.ok) {
+      const data = await r.json();
+      mhcIndex = data.chunks || [];
+    }
+  } catch(e) { mhcIndex = []; }
+}
+
+function getMHCChapterSections(bookName, chapter) {
+  if (!mhcIndex) return [];
+  return mhcIndex.filter(c =>
+    c.chunk_type === 'section' &&
+    c.book_name === bookName &&
+    c.chapter === chapter
+  ).sort((a, b) => (a.section_num || 0) - (b.section_num || 0));
+}
+
+function getMHCNameMatches(termName, limit = 3) {
+  if (!mhcIndex) return [];
+  const lower = termName.toLowerCase();
+  return mhcIndex.filter(c =>
+    c.chunk_type === 'section' &&
+    c.section_title?.toLowerCase().includes(lower)
+  ).slice(0, limit);
+}
+
+async function fetchMHCUrl(url) {
+  if (!url) return null;
+  try {
     const r = await fetch(url);
     if (!r.ok) return null;
     const data = await r.json();
     return data.results?.[0] || null;
   } catch(e) { return null; }
-}
-
-async function fetchMHCChapter(slug, chapter) {
-  // Try a chapter index file first (e.g. /commentary/1-samuel/25/index.json)
-  try {
-    const url = `${MHC_BASE}/commentary/${slug}/${chapter}/index.json`;
-    const r = await fetch(url);
-    if (r.ok) {
-      const data = await r.json();
-      if (data.results?.length) return data.results;
-    }
-  } catch(e) {}
-
-  // Fallback: scan the main index for sections in this chapter
-  try {
-    const indexResp = await fetch(`${MHC_BASE}/index.json`);
-    if (!indexResp.ok) return [];
-    const index = await indexResp.json();
-    const bookName = Object.keys(BOOK_TO_SLUG).find(k => BOOK_TO_SLUG[k] === slug);
-    const matches = index.chunks.filter(c =>
-      c.chunk_type === 'section' &&
-      c.book_name === bookName &&
-      c.chapter === chapter
-    ).slice(0, 4);
-
-    // Fetch each section's JSON
-    const results = await Promise.all(matches.map(async m => {
-      const vs = m.verse_start, ve = m.verse_end;
-      const filename = (vs && ve && vs !== ve) ? `${vs}-${ve}` : (vs || null);
-      if (!filename) return null;
-      try {
-        const r = await fetch(`${MHC_BASE}/commentary/${slug}/${chapter}/${filename}.json`);
-        if (!r.ok) return null;
-        const d = await r.json();
-        return d.results?.[0] || null;
-      } catch(e) { return null; }
-    }));
-    return results.filter(Boolean);
-  } catch(e) { return []; }
-}
-
-async function fetchMHCByName(termName) {
-  try {
-    const indexResp = await fetch(`${MHC_BASE}/index.json`);
-    if (!indexResp.ok) return [];
-    const index = await indexResp.json();
-    const termLower = termName.toLowerCase();
-    const matches = index.chunks.filter(c =>
-      c.chunk_type === 'section' &&
-      c.section_title?.toLowerCase().includes(termLower)
-    ).slice(0, 3);
-
-    const results = await Promise.all(matches.map(async m => {
-      const slug = BOOK_TO_SLUG[m.book_name];
-      if (!slug) return null;
-      const vs = m.verse_start, ve = m.verse_end;
-      const filename = (vs && ve && vs !== ve) ? `${vs}-${ve}` : (vs || null);
-      if (!filename) return null;
-      try {
-        const r = await fetch(`${MHC_BASE}/commentary/${slug}/${m.chapter}/${filename}.json`);
-        if (!r.ok) return null;
-        const d = await r.json();
-        return d.results?.[0] || null;
-      } catch(e) { return null; }
-    }));
-    return results.filter(Boolean);
-  } catch(e) { return []; }
 }
 
 async function loadMoreMHC(term) {
@@ -911,19 +885,11 @@ async function loadMoreMHC(term) {
   btn.disabled = true;
   btn.textContent = 'Searching…';
 
-  // Find all verse_map keys whose section URLs we can fetch
-  // Strategy: search verse_map for known first appearances of related terms,
-  // then fetch the full index and filter by term name in section_title
   try {
-    const indexResp = await fetch(`${MHC_BASE}/index.json`);
-    const index = await indexResp.json();
+    await ensureMHCIndex();
 
-    // Search section titles for the term name (case-insensitive)
-    const termLower = term.term.toLowerCase();
-    const matches = index.chunks.filter(c =>
-      c.chunk_type === 'section' &&
-      c.section_title && c.section_title.toLowerCase().includes(termLower)
-    ).slice(0, 8);
+    // Search section titles for the term name, use url field directly
+    const matches = getMHCNameMatches(term.term, 8);
 
     if (!matches.length) {
       moreZone.innerHTML = `<p class="mhc-note">No additional sections found with "${term.term}" in the title.</p>`;
@@ -931,21 +897,9 @@ async function loadMoreMHC(term) {
       return;
     }
 
-    // Fetch each matching chunk
-    const chunks = await Promise.all(matches.map(async m => {
-      const slug = BOOK_TO_SLUG[m.book_name];
-      if (!slug) return null;
-      const vs = m.verse_start, ve = m.verse_end;
-      const filename = (vs && ve && vs !== ve) ? `${vs}-${ve}` : vs;
-      if (!filename) return null;
-      try {
-        const r = await fetch(`${MHC_BASE}/commentary/${slug}/${m.chapter}/${filename}.json`);
-        const d = await r.json();
-        return d.results?.[0] || null;
-      } catch(e) { return null; }
-    }));
-
+    const chunks = await Promise.all(matches.map(m => fetchMHCUrl(m.url)));
     const valid = chunks.filter(Boolean);
+
     if (!valid.length) {
       moreZone.innerHTML = `<p class="mhc-note">Could not load additional sections.</p>`;
     } else {
