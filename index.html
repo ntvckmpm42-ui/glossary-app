@@ -712,6 +712,24 @@ const BOOK_TO_SLUG = {
   '2 John':'2-john','3 John':'3-john','Jude':'jude','Revelation':'revelation',
 };
 
+// ── Canonical Bible book order (Genesis → Revelation) ────────────────────────
+const BIBLE_BOOK_ORDER = {
+  'Genesis':1,'Exodus':2,'Leviticus':3,'Numbers':4,'Deuteronomy':5,
+  'Joshua':6,'Judges':7,'Ruth':8,'1 Samuel':9,'2 Samuel':10,
+  '1 Kings':11,'2 Kings':12,'1 Chronicles':13,'2 Chronicles':14,
+  'Ezra':15,'Nehemiah':16,'Esther':17,'Job':18,'Psalms':19,'Proverbs':20,
+  'Ecclesiastes':21,'Song of Solomon':22,'Isaiah':23,'Jeremiah':24,
+  'Lamentations':25,'Ezekiel':26,'Daniel':27,'Hosea':28,'Joel':29,
+  'Amos':30,'Obadiah':31,'Jonah':32,'Micah':33,'Nahum':34,
+  'Habakkuk':35,'Zephaniah':36,'Haggai':37,'Zechariah':38,'Malachi':39,
+  'Matthew':40,'Mark':41,'Luke':42,'John':43,'Acts':44,'Romans':45,
+  '1 Corinthians':46,'2 Corinthians':47,'Galatians':48,'Ephesians':49,
+  'Philippians':50,'Colossians':51,'1 Thessalonians':52,'2 Thessalonians':53,
+  '1 Timothy':54,'2 Timothy':55,'Titus':56,'Philemon':57,'Hebrews':58,
+  'James':59,'1 Peter':60,'2 Peter':61,'1 John':62,'2 John':63,
+  '3 John':64,'Jude':65,'Revelation':66,
+};
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let DB = null;
 let allTerms = [];
@@ -776,6 +794,16 @@ function loadTerms() {
     LEFT JOIN term_detail d ON d.term_id = t.id
     ORDER BY t.term
   `);
+  // Re-sort: Books of the Bible use canonical order (Genesis → Revelation);
+  // all other sections remain A–Z.
+  allTerms.sort((a, b) => {
+    const aBook = a.section === 'Books of the Bible';
+    const bBook = b.section === 'Books of the Bible';
+    if (aBook && bBook) {
+      return (BIBLE_BOOK_ORDER[a.term] ?? 99) - (BIBLE_BOOK_ORDER[b.term] ?? 99);
+    }
+    return a.term.localeCompare(b.term);
+  });
   filtered = [...allTerms];
 }
 
@@ -816,7 +844,7 @@ function getCrossRefs(termId) {
 function searchTerms(q) {
   if (!q.trim()) return [...allTerms];
   try {
-    return query(`
+    const results = query(`
       SELECT t.id, t.term, t.section, t.category, t.gender, t.testament,
              d.description, d.original_word, d.original_language,
              d.meaning_of_name, d.first_book, d.first_chapter, d.first_verse,
@@ -827,6 +855,16 @@ function searchTerms(q) {
       WHERE terms_fts MATCH ?
       ORDER BY rank
     `, [q + '*']);
+    // Apply canonical order for books within search results too
+    results.sort((a, b) => {
+      const aBook = a.section === 'Books of the Bible';
+      const bBook = b.section === 'Books of the Bible';
+      if (aBook && bBook) {
+        return (BIBLE_BOOK_ORDER[a.term] ?? 99) - (BIBLE_BOOK_ORDER[b.term] ?? 99);
+      }
+      return 0; // preserve FTS rank order for non-books
+    });
+    return results;
   } catch(e) { return []; }
 }
 
@@ -902,7 +940,6 @@ function shortSection(s) {
 // ── Description renderer — handles multi-paragraph text ──────────────────────
 function renderDescription(text) {
   if (!text) return '';
-  // Split on double newlines for paragraphs, single newlines become spaces
   const paras = text.split(/\n\n+/).map(p => p.replace(/\n/g, ' ').trim()).filter(Boolean);
   if (paras.length <= 1) {
     return `<p class="description">${text.replace(/\n/g, '<br>')}</p>`;
@@ -926,9 +963,7 @@ function renderDetail(term) {
   const refs  = getCrossRefs(term.id);
   const hasDetail = term.description || term.original_word || term.meaning_of_name;
   const accent = SECTION_ACCENT[term.section] || '#a87c2a';
-  const isPlace = term.section === 'Places';
 
-  // Map link HTML — used just above the commentary rule
   const mapLinkHtml = (term.lat && term.lon) ? `
     <div class="map-link-wrap">
       <a class="map-link"
