@@ -794,14 +794,18 @@ function loadTerms() {
     LEFT JOIN term_detail d ON d.term_id = t.id
     ORDER BY t.term
   `);
-  // Re-sort: Books of the Bible use canonical order (Genesis → Revelation);
-  // all other sections remain A–Z.
+  // Re-sort: Books of the Bible use canonical order (Genesis → Revelation).
+  // The sort must keep books grouped together; a book vs. non-book comparison
+  // cannot fall back to localeCompare or books scatter throughout the A–Z list.
   allTerms.sort((a, b) => {
     const aBook = a.section === 'Books of the Bible';
     const bBook = b.section === 'Books of the Bible';
     if (aBook && bBook) {
+      // Both books: canonical Bible order
       return (BIBLE_BOOK_ORDER[a.term] ?? 99) - (BIBLE_BOOK_ORDER[b.term] ?? 99);
     }
+    if (aBook && !bBook) return -1; // books sort before everything else
+    if (!aBook && bBook) return  1;
     return a.term.localeCompare(b.term);
   });
   filtered = [...allTerms];
@@ -862,6 +866,8 @@ function searchTerms(q) {
       if (aBook && bBook) {
         return (BIBLE_BOOK_ORDER[a.term] ?? 99) - (BIBLE_BOOK_ORDER[b.term] ?? 99);
       }
+      if (aBook && !bBook) return -1;
+      if (!aBook && bBook) return  1;
       return 0; // preserve FTS rank order for non-books
     });
     return results;
