@@ -251,6 +251,24 @@
     max-width: 62ch;
   }
 
+  /* ── Map link ── */
+  .map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 1.4rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-decoration: none;
+    border: 1px solid var(--rule);
+    padding: 0.4rem 0.9rem;
+    transition: all 0.15s;
+  }
+  .map-link:hover { border-color: var(--gold); background: var(--parch2); }
+
   /* ── Relationships ── */
   .section-title {
     font-family: 'Cinzel', serif;
@@ -581,7 +599,8 @@ function loadTerms() {
   allTerms = query(`
     SELECT t.id, t.term, t.section, t.category, t.gender, t.testament,
            d.description, d.original_word, d.original_language,
-           d.meaning_of_name, d.first_book, d.first_chapter, d.first_verse
+           d.meaning_of_name, d.first_book, d.first_chapter, d.first_verse,
+           d.lat, d.lon
     FROM terms t
     LEFT JOIN term_detail d ON d.term_id = t.id
     ORDER BY t.term
@@ -629,7 +648,8 @@ function searchTerms(q) {
     return query(`
       SELECT t.id, t.term, t.section, t.category, t.gender, t.testament,
              d.description, d.original_word, d.original_language,
-             d.meaning_of_name, d.first_book, d.first_chapter, d.first_verse
+             d.meaning_of_name, d.first_book, d.first_chapter, d.first_verse,
+             d.lat, d.lon
       FROM terms_fts
       JOIN terms t ON t.rowid = terms_fts.rowid
       LEFT JOIN term_detail d ON d.term_id = t.id
@@ -729,6 +749,11 @@ function renderDetail(term) {
     </div>` : ''}
 
     ${term.description ? `<p class="description">${term.description}</p>` : ''}
+
+    ${(term.lat && term.lon) ? `
+    <a class="map-link" href="https://www.google.com/maps?q=${term.lat},${term.lon}&z=10" target="_blank" rel="noopener noreferrer">
+      🗺 View on Map
+    </a>` : ''}
 
     ${rels.length ? `
     <hr class="rule">
