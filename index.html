@@ -770,46 +770,63 @@ async function loadMHC(term) {
   const zone = document.getElementById('mhc-zone');
   if (!zone) return;
 
-  // Primary: fetch the section for the term's first appearance
-  let primaryChunk = null;
-  if (term.first_book && term.first_chapter && term.first_verse) {
-    primaryChunk = await fetchMHCVerse(term.first_book, term.first_chapter, term.first_verse);
+  let chunks = [];
+  let matchLevel = 'none';
+  let noteText = '';
+
+  const slug = term.first_book ? BOOK_TO_SLUG[term.first_book] : null;
+
+  // Level 1: exact verse JSON file
+  if (slug && term.first_chapter && term.first_verse) {
+    const result = await fetchMHCVerse(slug, term.first_chapter, term.first_verse);
+    if (result) {
+      chunks = [result];
+      matchLevel = 'verse';
+      noteText = `Commentary on ${term.term}'s first appearance — ${term.first_book} ${term.first_chapter}:${term.first_verse}`;
+    }
   }
 
-  // Secondary: search for more sections via FTS on the term name
-  // We use the chapter index files we already have
-  // For now show the primary and offer "see more" which searches by term name across books
-  if (primaryChunk) {
+  // Level 2: chapter index (all sections for that chapter)
+  if (!chunks.length && slug && term.first_chapter) {
+    chunks = await fetchMHCChapter(slug, term.first_chapter);
+    if (chunks.length) {
+      matchLevel = 'chapter';
+      noteText = `Chapter commentary for ${term.first_book} ${term.first_chapter}`;
+    }
+  }
+
+  // Level 3: search index.json for term name in section titles
+  if (!chunks.length) {
+    chunks = await fetchMHCByName(term.term);
+    if (chunks.length) {
+      matchLevel = 'name';
+      noteText = `Commentary sections mentioning "${term.term}"`;
+    }
+  }
+
+  if (chunks.length) {
     zone.innerHTML = `
-      <p class="mhc-note">Commentary on ${term.term}'s first appearance — ${term.first_book} ${term.first_chapter}:${term.first_verse}</p>
-      ${renderMHCBlock(primaryChunk)}
+      <p class="mhc-note">${noteText}</p>
+      ${chunks.map(renderMHCBlock).join('')}
       <button class="mhc-load-more" id="mhc-more">
         See more commentary mentioning ${term.term} ↓
       </button>
       <div id="mhc-more-zone"></div>
     `;
-    document.getElementById('mhc-more')?.addEventListener('click', () => loadMoreMHC(term));
-  } else if (term.first_book) {
+  } else {
     zone.innerHTML = `
-      <p class="mhc-note">No verse-level match found. Showing chapter commentary for ${term.first_book} ${term.first_chapter || ''}.</p>
-      <button class="mhc-load-more" id="mhc-more">
-        Find commentary mentioning ${term.term} ↓
-      </button>
+      <p class="mhc-note">No commentary found for ${term.first_book ? term.first_book + (term.first_chapter ? ' ' + term.first_chapter : '') : term.term}.
+        <button class="mhc-load-more" style="display:inline;width:auto;border:none;padding:0" id="mhc-more">Search commentary →</button>
+      </p>
       <div id="mhc-more-zone"></div>
     `;
-    document.getElementById('mhc-more')?.addEventListener('click', () => loadMoreMHC(term));
-  } else {
-    zone.innerHTML = `<p class="mhc-note">No first appearance recorded for this term. <button class="mhc-load-more" style="display:inline;width:auto;border:none;padding:0" id="mhc-more">Search commentary →</button></p><div id="mhc-more-zone"></div>`;
-    document.getElementById('mhc-more')?.addEventListener('click', () => loadMoreMHC(term));
   }
 
-  // Attach toggle listeners
+  document.getElementById('mhc-more')?.addEventListener('click', () => loadMoreMHC(term));
   attachMHCToggles();
 }
 
-async function fetchMHCVerse(book, chapter, verse) {
-  const slug = BOOK_TO_SLUG[book];
-  if (!slug) return null;
+async function fetchMHCVerse(slug, chapter, verse) {
   try {
     const url = `${MHC_BASE}/commentary/${slug}/${chapter}/${verse}.json`;
     const r = await fetch(url);
@@ -817,6 +834,73 @@ async function fetchMHCVerse(book, chapter, verse) {
     const data = await r.json();
     return data.results?.[0] || null;
   } catch(e) { return null; }
+}
+
+async function fetchMHCChapter(slug, chapter) {
+  // Try a chapter index file first (e.g. /commentary/1-samuel/25/index.json)
+  try {
+    const url = `${MHC_BASE}/commentary/${slug}/${chapter}/index.json`;
+    const r = await fetch(url);
+    if (r.ok) {
+      const data = await r.json();
+      if (data.results?.length) return data.results;
+    }
+  } catch(e) {}
+
+  // Fallback: scan the main index for sections in this chapter
+  try {
+    const indexResp = await fetch(`${MHC_BASE}/index.json`);
+    if (!indexResp.ok) return [];
+    const index = await indexResp.json();
+    const bookName = Object.keys(BOOK_TO_SLUG).find(k => BOOK_TO_SLUG[k] === slug);
+    const matches = index.chunks.filter(c =>
+      c.chunk_type === 'section' &&
+      c.book_name === bookName &&
+      c.chapter === chapter
+    ).slice(0, 4);
+
+    // Fetch each section's JSON
+    const results = await Promise.all(matches.map(async m => {
+      const vs = m.verse_start, ve = m.verse_end;
+      const filename = (vs && ve && vs !== ve) ? `${vs}-${ve}` : (vs || null);
+      if (!filename) return null;
+      try {
+        const r = await fetch(`${MHC_BASE}/commentary/${slug}/${chapter}/${filename}.json`);
+        if (!r.ok) return null;
+        const d = await r.json();
+        return d.results?.[0] || null;
+      } catch(e) { return null; }
+    }));
+    return results.filter(Boolean);
+  } catch(e) { return []; }
+}
+
+async function fetchMHCByName(termName) {
+  try {
+    const indexResp = await fetch(`${MHC_BASE}/index.json`);
+    if (!indexResp.ok) return [];
+    const index = await indexResp.json();
+    const termLower = termName.toLowerCase();
+    const matches = index.chunks.filter(c =>
+      c.chunk_type === 'section' &&
+      c.section_title?.toLowerCase().includes(termLower)
+    ).slice(0, 3);
+
+    const results = await Promise.all(matches.map(async m => {
+      const slug = BOOK_TO_SLUG[m.book_name];
+      if (!slug) return null;
+      const vs = m.verse_start, ve = m.verse_end;
+      const filename = (vs && ve && vs !== ve) ? `${vs}-${ve}` : (vs || null);
+      if (!filename) return null;
+      try {
+        const r = await fetch(`${MHC_BASE}/commentary/${slug}/${m.chapter}/${filename}.json`);
+        if (!r.ok) return null;
+        const d = await r.json();
+        return d.results?.[0] || null;
+      } catch(e) { return null; }
+    }));
+    return results.filter(Boolean);
+  } catch(e) { return []; }
 }
 
 async function loadMoreMHC(term) {
