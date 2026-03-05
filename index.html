@@ -474,14 +474,9 @@
     font-size: 0.68rem;
     color: var(--ink-faint);
     line-height: 1.4;
-    text-decoration: none;
     display: flex;
     gap: 0.4em;
     align-items: baseline;
-    transition: color 0.15s;
-  }
-  .passage-link:hover {
-    color: var(--gold-mid);
   }
   .passage-ref {
     font-family: 'Cinzel', serif;
@@ -1102,12 +1097,10 @@ function renderDetail(term) {
       <span class="card-passages-label">Major Passages</span>
       <div class="passage-list">
         ${passages.map(p => `
-          <a class="passage-link"
-             href="https://www.biblegateway.com/passage/?search=${encodeURIComponent(p.passage_ref)}&version=ESV"
-             target="_blank" rel="noopener noreferrer">
+          <span class="passage-link">
             <span class="passage-ref">${p.passage_ref}</span>
             <span class="passage-desc">${p.passage_desc}</span>
-          </a>
+          </span>
         `).join('')}
       </div>
     </div>` : ''}
