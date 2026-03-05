@@ -6,7 +6,7 @@
 <title>Bible Glossary — Character Study</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.2/dist/sql-wasm-fts5.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sql.js-fts5@1.10.2/dist/sql-wasm.js"></script>
 <style>
   /* ── Design tokens — exact match to JSX parchment edition ── */
   :root {
@@ -812,7 +812,7 @@ let verseMap = null;
 async function init() {
   setStatus('Initialising sql.js…');
   const SQL = await initSqlJs({
-    locateFile: f => `https://cdn.jsdelivr.net/npm/sql.js@1.10.2/dist/${f.replace('sql-wasm.wasm','sql-wasm-fts5.wasm')}`
+    locateFile: f => `https://cdn.jsdelivr.net/npm/sql.js-fts5@1.10.2/dist/${f}`
   });
 
   setStatus('Loading glossary database…');
