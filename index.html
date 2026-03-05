@@ -6,7 +6,7 @@
 <title>Bible Glossary — Character Study</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/sql.js-fts5@1.10.2/dist/sql-wasm.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
 <style>
   /* ── Design tokens — exact match to JSX parchment edition ── */
   :root {
@@ -812,7 +812,7 @@ let verseMap = null;
 async function init() {
   setStatus('Initialising sql.js…');
   const SQL = await initSqlJs({
-    locateFile: f => `https://cdn.jsdelivr.net/npm/sql.js-fts5@1.10.2/dist/${f}`
+    locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/${f}`
   });
 
   setStatus('Loading glossary database…');
@@ -960,18 +960,21 @@ function getPersonGroups(personTermId) {
 function searchTerms(q) {
   if (!q.trim()) return [...allTerms];
   try {
+    const like = `%${q}%`;
     const results = query(`
       SELECT t.id, t.term, t.section, t.category, t.gender, t.testament,
              d.description, d.original_word, d.original_language,
              d.meaning_of_name, d.first_book, d.first_chapter, d.first_verse,
              d.lat, d.lon
-      FROM terms_fts
-      JOIN terms t ON t.rowid = terms_fts.rowid
+      FROM terms t
       LEFT JOIN term_detail d ON d.term_id = t.id
-      WHERE terms_fts MATCH ?
-      ORDER BY rank
-    `, [q + '*']);
-    // Apply canonical sort within search results too
+      WHERE t.term LIKE ?
+         OR d.description LIKE ?
+         OR d.meaning_of_name LIKE ?
+      ORDER BY
+        CASE WHEN t.term LIKE ? THEN 0 ELSE 1 END,
+        t.term COLLATE NOCASE
+    `, [like, like, like, q + '%']);
     return sortTerms(results, activeSort);
   } catch(e) { return []; }
 }
