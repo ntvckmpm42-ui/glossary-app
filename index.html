@@ -580,6 +580,31 @@
     letter-spacing: 0.01em;
   }
 
+  /* ── MHC Passage groups (Books of the Bible) ── */
+  .mhc-passage-group {
+    margin-bottom: 1.4rem;
+  }
+
+  .mhc-passage-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--parchment-border);
+  }
+
+  .mhc-passage-label em {
+    font-family: 'IM Fell English', Georgia, serif;
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: 0.03em;
+    color: var(--ink-faint);
+    font-size: 1.1em;
+  }
+
   /* ── Loading screen ── */
   .loader {
     position: fixed; inset: 0;
@@ -1140,12 +1165,86 @@ function renderDetail(term) {
 }
 
 // ── MHC Commentary ────────────────────────────────────────────────────────────
+
+// Parse a passage_ref string like "3:1–22" → { chapter, verseStart, verseEnd }
+// Handles en-dash (–), hyphen (-), missing verse range, chapter-only refs.
+function parsePassageRef(ref) {
+  if (!ref) return null;
+  const match = ref.match(/^(\d+)(?::(\d+)(?:[–\-](\d+))?)?/);
+  if (!match) return null;
+  return {
+    chapter:    parseInt(match[1]),
+    verseStart: match[2] ? parseInt(match[2]) : 1,
+    verseEnd:   match[3] ? parseInt(match[3]) : (match[2] ? parseInt(match[2]) : 999),
+  };
+}
+
+// For Books of the Bible: render one MHC block per major passage
+async function loadMHCForBook(term, passages, zone) {
+  zone.innerHTML = `<p class="mhc-note">Loading commentary for major passages…</p>`;
+
+  const bookName = term.term;
+  const results  = [];
+
+  for (const p of passages) {
+    const parsed = parsePassageRef(p.passage_ref);
+    if (!parsed) continue;
+
+    const { chapter, verseStart, verseEnd } = parsed;
+    const chapterSections = getMHCChapterSections(bookName, chapter);
+
+    let chunk = null;
+    if (chapterSections.length) {
+      // Prefer a section whose verse range overlaps the passage
+      const withVerses = chapterSections.filter(s =>
+        s.verse_start != null && s.verse_end != null &&
+        s.verse_start <= verseEnd && s.verse_end >= verseStart
+      );
+      const candidate = withVerses.length ? withVerses[0] : chapterSections[0];
+      chunk = await fetchMHCUrl(candidate.url);
+    }
+
+    results.push({ passage: p, chunk });
+  }
+
+  const hasAny = results.some(r => r.chunk);
+  if (!hasAny) {
+    zone.innerHTML = `<p class="mhc-note">No passage commentary found for ${bookName}.</p>`;
+    return;
+  }
+
+  zone.innerHTML = results.map(({ passage, chunk }) => {
+    if (!chunk) return `
+      <div class="mhc-passage-group">
+        <div class="mhc-passage-label">${passage.passage_ref} — <em>${passage.passage_desc}</em></div>
+        <p class="mhc-note" style="margin:0 0 0.5rem">No commentary located for this passage.</p>
+      </div>`;
+    return `
+      <div class="mhc-passage-group">
+        <div class="mhc-passage-label">${passage.passage_ref} — <em>${passage.passage_desc}</em></div>
+        ${renderMHCBlock(chunk)}
+      </div>`;
+  }).join('');
+
+  attachMHCToggles();
+}
+
 async function loadMHC(term) {
   const zone = document.getElementById('mhc-zone');
   if (!zone) return;
 
   await ensureMHCIndex();
 
+  // Books of the Bible with major passages → per-passage commentary
+  if (term.section === 'Books of the Bible') {
+    const passages = getPassages(term.term);
+    if (passages.length) {
+      await loadMHCForBook(term, passages, zone);
+      return;
+    }
+  }
+
+  // All other terms (and books without passages) — first-appearance + name fallback
   let chunks = [];
   let noteText = '';
 
