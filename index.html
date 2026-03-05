@@ -275,6 +275,16 @@
     margin-bottom: 0.4rem;
   }
 
+  .grouping-chip {
+    display: inline-block; margin-top: 0.3rem;
+    background: rgba(155,127,166,0.12); border: 1px solid rgba(155,127,166,0.4);
+    border-radius: 2px; padding: 0.15rem 0.5rem;
+    font-family: 'Cinzel', serif; font-size: 0.5rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: #9B7FA6; cursor: pointer; transition: all 0.15s;
+  }
+  .grouping-chip:hover { border-color: #9B7FA6; color: #c4a8d4; }
+
   .term-meta {
     font-family: 'IM Fell English SC', serif;
     font-size: 0.78rem;
@@ -986,6 +996,16 @@ function renderDetail(term) {
   const hasDetail = term.description || term.original_word || term.meaning_of_name;
   const accent = SECTION_ACCENT[term.section] || '#a87c2a';
 
+  // For Books of the Bible, surface the canonical grouping from T&D cross-refs
+  const GROUPING_NAMES = new Set([
+    'Pentateuch','Historical Books','Wisdom & Poetry',
+    'Major Prophets','Minor Prophets','Gospels','Acts',
+    'Pauline Epistles','General Epistles','Apocalyptic'
+  ]);
+  const groupingRef = (term.section === 'Books of the Bible')
+    ? refs.find(r => GROUPING_NAMES.has(r.term))
+    : null;
+
   const mapLinkHtml = (term.lat && term.lon) ? `
     <div class="map-link-wrap">
       <a class="map-link"
@@ -1006,6 +1026,7 @@ function renderDetail(term) {
         ${term.testament ? `<span>${term.testament}</span>` : ''}
         ${term.gender && term.gender !== 'unknown' ? `<span>${term.gender}</span>` : ''}
         ${term.category ? `<span>${term.category.replace('_',' ')}</span>` : ''}
+        ${groupingRef ? `<button class="grouping-chip" data-id="${groupingRef.id}">${groupingRef.term}</button>` : ''}
       </div>
     </div>
 
@@ -1057,7 +1078,7 @@ function renderDetail(term) {
     </div>
   `;
 
-  detail.querySelectorAll('.rel-chip, .crossref-chip').forEach(btn => {
+  detail.querySelectorAll('.rel-chip, .crossref-chip, .grouping-chip').forEach(btn => {
     btn.addEventListener('click', () => selectTerm(parseInt(btn.dataset.id)));
   });
 
