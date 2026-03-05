@@ -816,7 +816,7 @@ async function init() {
   });
 
   setStatus('Loading glossary database…');
-  const resp = await fetch(DB_URL);
+  const resp = await fetch(DB_URL + '?v=' + Date.now(), { cache: 'no-store' });
   if (!resp.ok) throw new Error(`Could not load ${DB_URL}: ${resp.status}`);
   const buf = await resp.arrayBuffer();
   DB = new SQL.Database(new Uint8Array(buf));
