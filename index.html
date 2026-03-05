@@ -933,6 +933,30 @@ function getPassages(bookName) {
   } catch(e) { return []; }
 }
 
+function getGroupMembers(groupTermId) {
+  try {
+    return query(`
+      SELECT t.term, t.id, t.section
+      FROM group_members gm
+      JOIN terms t ON t.id = gm.member_term_id
+      WHERE gm.group_term_id = ?
+      ORDER BY t.term COLLATE NOCASE
+    `, [groupTermId]);
+  } catch(e) { return []; }
+}
+
+function getPersonGroups(personTermId) {
+  try {
+    return query(`
+      SELECT t.term, t.id
+      FROM group_members gm
+      JOIN terms t ON t.id = gm.group_term_id
+      WHERE gm.member_term_id = ?
+      ORDER BY t.term COLLATE NOCASE
+    `, [personTermId]);
+  } catch(e) { return []; }
+}
+
 function searchTerms(q) {
   if (!q.trim()) return [...allTerms];
   try {
@@ -1056,9 +1080,12 @@ function selectTerm(id) {
 }
 
 function renderDetail(term) {
-  const rels  = getRelationships(term.id);
-  const refs  = getCrossRefs(term.id);
+  const rels     = getRelationships(term.id);
+  const refs     = getCrossRefs(term.id);
   const passages = (term.section === 'Books of the Bible') ? getPassages(term.term) : [];
+  const members  = (term.section === 'Peoples & Groups')   ? getGroupMembers(term.id) : [];
+  const personGroups = (term.section === 'OT People' || term.section === 'NT People')
+                       ? getPersonGroups(term.id) : [];
   const hasDetail = term.description || term.original_word || term.meaning_of_name;
   const accent = SECTION_ACCENT[term.section] || '#a87c2a';
 
@@ -1093,6 +1120,7 @@ function renderDetail(term) {
         ${term.gender && term.gender !== 'unknown' ? `<span>${term.gender}</span>` : ''}
         ${term.category ? `<span>${term.category.replace('_',' ')}</span>` : ''}
         ${groupingRef ? `<button class="grouping-chip" data-id="${groupingRef.id}">${groupingRef.term}</button>` : ''}
+        ${personGroups.map(g => `<button class="grouping-chip" data-id="${g.id}">${g.term}</button>`).join('')}
       </div>
     </div>
 
@@ -1116,6 +1144,13 @@ function renderDetail(term) {
     </div>` : ''}
 
     ${term.description ? renderDescription(term.description) : ''}
+
+    ${members.length ? `
+    <hr class="rule">
+    <div class="section-title">Members</div>
+    <div class="crossref-list">
+      ${members.map(m => `<button class="crossref-chip" data-id="${m.id}">${m.term}</button>`).join('')}
+    </div>` : ''}
 
     ${passages.length ? `
     <div class="card-passages">
