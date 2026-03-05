@@ -135,36 +135,38 @@
     align-items: center;
   }
 
-  .filter-divider {
-    width: 1px; height: 1.1rem;
+  /* ── Filter / sort buttons — shared style ── */
+  .filter-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 1px;
+    color: var(--ink-dim);
+    font-family: 'Cinzel', serif;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    padding: 0.28rem 0.65rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .filter-btn:hover {
+    color: var(--ink-light);
+    border-color: var(--parchment-border);
+    background: rgba(255,255,255,0.03);
+  }
+  .filter-btn.active {
+    background: rgba(180,130,40,0.12);
+    border-color: var(--gold-dim);
+    color: var(--gold-bright);
+  }
+
+  /* Divider between section pills and sort buttons */
+  .sort-divider {
+    width: 1px; height: 1.2rem;
     background: var(--parchment-border);
     margin: 0 0.25rem;
     flex-shrink: 0;
-  }
-
-  .pill {
-    font-family: 'Cinzel', serif;
-    font-size: 0.55rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    padding: 0.28rem 0.65rem;
-    border: 1px solid var(--parchment-border);
-    border-radius: 1px;
-    background: transparent;
-    color: var(--ink-dim);
-    cursor: pointer;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-  .pill:hover {
-    border-color: var(--gold-dim);
-    color: var(--ink-light);
-    background: rgba(255,255,255,0.03);
-  }
-  .pill.active {
-    background: var(--gold-dim);
-    border-color: var(--gold-mid);
-    color: var(--ink-light);
   }
 
   /* ── Layout ── */
@@ -297,7 +299,6 @@
     display: flex; gap: 2rem; flex-wrap: wrap;
     padding: 0.9rem 1.1rem;
     background: var(--parchment-mid);
-    border-left: 2px solid var(--gold-mid);
     border: 1px solid var(--parchment-border);
     border-left: 2px solid var(--gold-mid);
     margin-bottom: 1.6rem;
@@ -327,7 +328,6 @@
     max-width: 64ch;
   }
 
-  /* Multi-paragraph descriptions */
   .description p {
     margin-bottom: 1em;
   }
@@ -356,19 +356,11 @@
     color: var(--gold-bright);
   }
 
-  /* ── Map link container — sits just above commentary rule ── */
   .map-link-wrap {
     display: flex;
     align-items: center;
     gap: 1rem;
     margin-bottom: 0.25rem;
-  }
-  .map-link-wrap .map-link-label {
-    font-family: 'Cinzel', serif;
-    font-size: 0.5rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
   }
 
   /* ── Section titles ── */
@@ -649,6 +641,11 @@
 const MHC_BASE = 'https://ntvckmpm42-ui.github.io/mhc';
 const DB_URL   = './bible_glossary.db';
 
+const SECTION_ORDER = [
+  'All', 'Books of the Bible', 'OT People', 'NT People',
+  'Places', 'Peoples & Groups', 'Theology & Doctrine'
+];
+
 const SECTION_ACCENT = {
   'Books of the Bible': '#C8A84B',
   'OT People':          '#B87333',
@@ -735,6 +732,7 @@ let DB = null;
 let allTerms = [];
 let filtered = [];
 let activeSection = 'All';
+let activeSort = 'az';      // 'az' | 'section'
 let activeTermId = null;
 let verseMap = null;
 
@@ -794,21 +792,36 @@ function loadTerms() {
     LEFT JOIN term_detail d ON d.term_id = t.id
     ORDER BY t.term
   `);
-  // Re-sort: Books of the Bible use canonical order (Genesis → Revelation).
-  // The sort must keep books grouped together; a book vs. non-book comparison
-  // cannot fall back to localeCompare or books scatter throughout the A–Z list.
-  allTerms.sort((a, b) => {
+  filtered = [...allTerms];
+}
+
+// ── Sort comparator ───────────────────────────────────────────────────────────
+// Books of the Bible always sort canonically (Genesis → Revelation).
+// A book vs. non-book comparison must never fall back to localeCompare or
+// books will scatter throughout the A–Z list.
+function sortTerms(terms, mode) {
+  return [...terms].sort((a, b) => {
     const aBook = a.section === 'Books of the Bible';
     const bBook = b.section === 'Books of the Bible';
-    if (aBook && bBook) {
-      // Both books: canonical Bible order
-      return (BIBLE_BOOK_ORDER[a.term] ?? 99) - (BIBLE_BOOK_ORDER[b.term] ?? 99);
+
+    if (mode === 'section') {
+      const si = s => SECTION_ORDER.indexOf(s.section);
+      const sectionDiff = si(a) - si(b);
+      if (sectionDiff !== 0) return sectionDiff;
+      // Within Books of the Bible: canonical order
+      if (aBook && bBook)
+        return (BIBLE_BOOK_ORDER[a.term] ?? 99) - (BIBLE_BOOK_ORDER[b.term] ?? 99);
+      return a.term.localeCompare(b.term);
     }
-    if (aBook && !bBook) return -1; // books sort before everything else
+
+    // A–Z mode: books sort canonically when both are books;
+    // a book always sorts before a non-book term
+    if (aBook && bBook)
+      return (BIBLE_BOOK_ORDER[a.term] ?? 99) - (BIBLE_BOOK_ORDER[b.term] ?? 99);
+    if (aBook && !bBook) return -1;
     if (!aBook && bBook) return  1;
     return a.term.localeCompare(b.term);
   });
-  filtered = [...allTerms];
 }
 
 function getRelationships(termId) {
@@ -859,53 +872,56 @@ function searchTerms(q) {
       WHERE terms_fts MATCH ?
       ORDER BY rank
     `, [q + '*']);
-    // Apply canonical order for books within search results too
-    results.sort((a, b) => {
-      const aBook = a.section === 'Books of the Bible';
-      const bBook = b.section === 'Books of the Bible';
-      if (aBook && bBook) {
-        return (BIBLE_BOOK_ORDER[a.term] ?? 99) - (BIBLE_BOOK_ORDER[b.term] ?? 99);
-      }
-      if (aBook && !bBook) return -1;
-      if (!aBook && bBook) return  1;
-      return 0; // preserve FTS rank order for non-books
-    });
-    return results;
+    // Apply canonical sort within search results too
+    return sortTerms(results, activeSort);
   } catch(e) { return []; }
 }
 
 // ── Filters ───────────────────────────────────────────────────────────────────
 function buildFilters() {
-  const SECTION_ORDER = [
-    'All','Books of the Bible','OT People','NT People',
-    'Places','Peoples & Groups','Theology & Doctrine'
-  ];
   const present = new Set(allTerms.map(t => t.section).filter(Boolean));
   const sections = SECTION_ORDER.filter(s => s === 'All' || present.has(s));
 
   const wrap = document.getElementById('filters');
-  wrap.innerHTML = sections.map((s, i) => {
+
+  // Section pills
+  const sectionBtns = sections.map(s => {
     const glyph = SECTION_GLYPHS[s] || '';
-    return `${i === 1 ? '<div class="filter-divider"></div>' : ''}
-      <button class="pill ${s === 'All' ? 'active' : ''}" data-section="${s}"
-              style="${s !== 'All' ? `--pill-accent:${SECTION_ACCENT[s] || '#7a5820'}` : ''}">
-        ${glyph} ${s}
-      </button>`;
+    return `<button class="filter-btn ${s === 'All' ? 'active' : ''}" data-section="${s}">${glyph} ${s}</button>`;
   }).join('');
 
+  // Sort buttons (separated by a divider)
+  const sortBtns = `
+    <div class="sort-divider"></div>
+    <button class="filter-btn active" data-sort="az">A–Z</button>
+    <button class="filter-btn" data-sort="section">Section</button>
+  `;
+
+  wrap.innerHTML = sectionBtns + sortBtns;
+
   wrap.addEventListener('click', e => {
-    const pill = e.target.closest('.pill');
-    if (!pill) return;
-    activeSection = pill.dataset.section;
-    wrap.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-    pill.classList.add('active');
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+
+    if (btn.dataset.section !== undefined) {
+      activeSection = btn.dataset.section;
+      wrap.querySelectorAll('[data-section]').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    if (btn.dataset.sort !== undefined) {
+      activeSort = btn.dataset.sort;
+      wrap.querySelectorAll('[data-sort]').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
     applyFilters();
   });
 }
 
 function applyFilters() {
   const q = document.getElementById('search').value;
-  let base = q ? searchTerms(q) : [...allTerms];
+  let base = q ? searchTerms(q) : sortTerms(allTerms, activeSort);
   filtered = activeSection === 'All' ? base : base.filter(t => t.section === activeSection);
   renderList();
 }
