@@ -22524,10 +22524,13 @@ let mhcIndexCache = null;
 
 async function loadMHCIndex() {
   if (mhcIndexCache) return mhcIndexCache;
+  console.log('[MHC] fetching index from', MHC_BASE + 'index.json');
   const resp = await fetch(MHC_BASE + 'index.json');
   if (!resp.ok) throw new Error('MHC index fetch failed: ' + resp.status);
   const data = await resp.json();
   mhcIndexCache = data.chunks || data;
+  console.log('[MHC] index ready. type:', typeof mhcIndexCache, 'isArray:', Array.isArray(mhcIndexCache),
+    'length:', mhcIndexCache.length, 'first entry keys:', Object.keys(mhcIndexCache[0] || {}));
   return mhcIndexCache;
 }
 
@@ -22565,8 +22568,7 @@ async function loadMHCForBook(t, targetEl) {
     const index = await loadMHCIndex();
     const bookName = t.term;
     const bookSections = index.filter(s => s.book_name === bookName);
-
-    if (!bookSections.length) {
+    console.log('[MHC] bookName:', bookName, 'matched sections:', bookSections.length);
       targetEl.innerHTML = '<div class="mhc-error">No commentary found for ' + esc(bookName) + '.</div>';
       return;
     }
@@ -22677,6 +22679,7 @@ async function loadMHC(t, targetEl) {
     const resp = await fetch(MHC_BASE + match.url);
     if (!resp.ok) throw new Error('Section fetch failed: ' + resp.status);
     const data = await resp.json();
+    console.log('[MHC] section data keys:', Object.keys(data), 'text length:', (data.text || data.content || '').length);
     targetEl.innerHTML = renderMHCSections([data]);
   } catch (err) {
     console.error('MHC loadMHC error:', err);
