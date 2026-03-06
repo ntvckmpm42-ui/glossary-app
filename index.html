@@ -22622,6 +22622,7 @@ async function loadMHCForBook(t, targetEl) {
       const valid = fetched.filter(Boolean);
 
       if (valid.length) {
+        console.log('[MHC] section keys:', Object.keys(valid[0]), 'text snippet:', String(valid[0].text || valid[0].content || valid[0].body || '(empty)').slice(0, 80));
         html += '<div class="mhc-passage-group">'
               + '<div class="mhc-passage-label">' + esc(p.ref) + ' · ' + esc(p.desc) + '</div>'
               + renderMHCSections(valid)
