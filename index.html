@@ -102,11 +102,12 @@ body {
   border-bottom: 1px solid var(--border-soft);
   display: flex; align-items: center; gap: 0.6rem;
   padding: 0.4rem 1rem; flex-shrink: 0; z-index: 19;
+  flex-wrap: wrap;
   transition: background 0.2s;
 }
 [data-skin="modern"] .toolbar { background: #f8fafc; }
-.toolbar .header-search { flex: 1; max-width: none; margin-left: 0; }
-.toolbar .skin-toggle { margin-left: 0; }
+.toolbar .header-search { flex: 1; min-width: 8rem; max-width: none; margin-left: 0; }
+.toolbar .skin-toggle { margin-left: auto; }
 
 .header-title {
   font-family: 'Cinzel', serif;
@@ -554,8 +555,8 @@ body {
   }
   /* Peek: ~6 sidebar items when detail is visible */
   .app-body.show-detail .sidebar {
-    height: 13rem;
-    max-height: 13rem;
+    height: 7rem;
+    max-height: 7rem;
     overflow: hidden;
   }
   .app-body.show-detail .sidebar-list { overflow-y: auto; }
