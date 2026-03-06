@@ -22569,6 +22569,8 @@ async function loadMHCForBook(t, targetEl) {
     const bookName = t.term;
     const bookSections = index.filter(s => s.book_name === bookName);
     console.log('[MHC] bookName:', bookName, 'matched sections:', bookSections.length);
+
+    if (!bookSections.length) {
       targetEl.innerHTML = '<div class="mhc-error">No commentary found for ' + esc(bookName) + '.</div>';
       return;
     }
