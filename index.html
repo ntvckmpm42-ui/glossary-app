@@ -73,11 +73,11 @@ body {
 
 /* ── Header ── */
 .header {
-  background: var(--bg-deep);
+  background: var(--bg-dark);
   border-bottom: 1px solid var(--border);
-  padding: 0 1.5rem;
+  padding: 0 1rem;
   height: 52px;
-  display: flex; align-items: center; gap: 1.5rem;
+  display: flex; align-items: center; gap: 0.75rem;
   flex-shrink: 0;
   position: sticky; top: 0; z-index: 20;
   transition: background 0.2s, border-color 0.2s;
@@ -87,6 +87,26 @@ body {
   border-bottom: 1.5px solid var(--border);
   box-shadow: 0 1px 0 var(--border-soft);
 }
+.header-back {
+  background: none; border: none; color: var(--ink-dim);
+  font-family: 'Cinzel', serif; font-size: 0.6rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  cursor: pointer; display: none; align-items: center; gap: 0.4em;
+  padding: 0.3rem 0.5rem; border-radius: var(--radius);
+  transition: color 0.15s, background 0.15s; flex-shrink: 0;
+}
+.header-back:hover { color: var(--gold); background: var(--gold-subtle); }
+[data-skin="modern"] .header-back:hover { color: #2563eb; background: #eff6ff; }
+.toolbar {
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border-soft);
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.4rem 1rem; flex-shrink: 0; z-index: 19;
+  transition: background 0.2s;
+}
+[data-skin="modern"] .toolbar { background: #f8fafc; }
+.toolbar .header-search { flex: 1; max-width: none; margin-left: 0; }
+.toolbar .skin-toggle { margin-left: 0; }
 
 .header-title {
   font-family: 'Cinzel', serif;
@@ -168,21 +188,18 @@ body {
 .filter-bar {
   background: var(--bg-dark);
   border-bottom: 1px solid var(--border);
-  padding: 0 1rem;
-  height: 36px;
-  display: flex; align-items: center; gap: 0.2rem; overflow-x: auto;
-  scrollbar-width: none; flex-shrink: 0;
-  position: sticky; top: 52px; z-index: 19;
+  padding: 0.3rem 1rem;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0.2rem;
+  flex-shrink: 0;
   transition: background 0.2s, border-color 0.2s;
 }
-.filter-bar::-webkit-scrollbar { display: none; }
 [data-skin="modern"] .filter-bar { background: #f1f5f9; }
 
 .filter-btn {
   background: transparent; border: none; border-radius: var(--radius);
   color: var(--ink-faint); font-family: 'Cinzel', serif; font-size: 0.58rem;
   letter-spacing: 0.08em; padding: 0.28rem 0.65rem; cursor: pointer;
-  white-space: nowrap; transition: all 0.12s; text-transform: uppercase; flex-shrink: 0;
+  transition: all 0.12s; text-transform: uppercase;
 }
 .filter-btn:hover { color: var(--ink); background: var(--gold-subtle); }
 .filter-btn.active { color: var(--gold); background: var(--gold-subtle); border: 1px solid var(--gold-dim); }
@@ -518,6 +535,17 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 [data-skin="modern"] ::-webkit-scrollbar-thumb { background: #cbd5e1; }
 
+@media (max-width: 767px) {
+  .app-body {
+    width: 200vw;
+    transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .app-body.show-detail { transform: translateX(-50%); }
+  .sidebar { width: 100vw; flex-shrink: 0; border-right: none; }
+  .detail  { width: 100vw; flex-shrink: 0; padding: 1.5rem 1.25rem 3rem; }
+  .header-back { display: flex; }
+}
+
 </style>
 </head>
 <body>
@@ -526,11 +554,19 @@ body {
 
 <!-- Header -->
 <header class="header">
-  <div class="header-title">
+  <button class="header-back" id="back-btn" onclick="goBack()" style="display:none">
+    <span style="font-size:0.9rem">←</span>
+    <span>Back</span>
+  </button>
+  <div class="header-title" style="flex:1;text-align:center">
     Character Study
     <span class="header-title-sep">·</span>
     Bible Glossary
   </div>
+</header>
+
+<!-- Toolbar: search + skin toggle -->
+<div class="toolbar">
   <div class="header-search">
     <span class="header-search-icon">🔍</span>
     <input type="text" id="search-input" placeholder="Search terms, descriptions…" oninput="onSearch()">
@@ -540,13 +576,13 @@ body {
     <button class="skin-btn active" onclick="setSkin('parchment')">🕯 Manuscript</button>
     <button class="skin-btn" onclick="setSkin('modern')">◈ Modern</button>
   </div>
-</header>
+</div>
 
 <!-- Filter bar -->
 <div class="filter-bar" id="filter-bar"></div>
 
 <!-- Two-panel body -->
-<div class="app-body">
+<div class="app-body" id="app-body">
   <aside class="sidebar">
     <div class="sidebar-count" id="sidebar-count"></div>
     <div class="sidebar-list" id="sidebar-list"></div>
@@ -22239,14 +22275,21 @@ function renderList() {
 function selectTerm(id) {
   currentId = id;
   const t = TERMS.find(x => x.id === id);
-  // Update sidebar active state without full re-render
   document.querySelectorAll(".sidebar-item").forEach(el => {
     el.classList.toggle("active", parseInt(el.dataset.id) === id);
   });
   renderDetail(t);
-  // Scroll selected item into view
   const el = document.querySelector('.sidebar-item[data-id="' + id + '"]');
   if (el) el.scrollIntoView({block:"nearest"});
+  if (window.innerWidth < 768) {
+    document.getElementById("app-body").classList.add("show-detail");
+    document.getElementById("back-btn").style.display = "flex";
+  }
+}
+
+function goBack() {
+  document.getElementById("app-body").classList.remove("show-detail");
+  document.getElementById("back-btn").style.display = "none";
 }
 
 // ── Detail panel ──────────────────────────────────────────────────────────────
@@ -22421,6 +22464,13 @@ function clearSearch() {
 buildFilterBar();
 renderList();
 renderDetail(null);
+
+window.addEventListener("resize", () => {
+  if (window.innerWidth >= 768) {
+    document.getElementById("app-body").classList.remove("show-detail");
+    document.getElementById("back-btn").style.display = "none";
+  }
+});
 </script>
 </body>
 </html>
