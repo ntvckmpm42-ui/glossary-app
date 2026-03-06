@@ -22583,7 +22583,7 @@ async function loadMHCForBook(t, targetEl) {
       const resp = await fetch(ch1.url);
       if (!resp.ok) throw new Error('Section fetch failed');
       const data = await resp.json();
-      targetEl.innerHTML = renderMHCSections([data]);
+      targetEl.innerHTML = renderMHCSections(data.results || [data]);
       return;
     }
 
@@ -22617,7 +22617,7 @@ async function loadMHCForBook(t, targetEl) {
 
       const toFetch = matched.slice(0, 2);
       const fetched = await Promise.all(
-        toFetch.map(s => fetch(s.url).then(r => r.ok ? r.json() : null).catch(() => null))
+        toFetch.map(s => fetch(s.url).then(r => r.ok ? r.json().then(d => d.results ? d.results[0] : d) : null).catch(() => null))
       );
       const valid = fetched.filter(Boolean);
 
@@ -22682,8 +22682,8 @@ async function loadMHC(t, targetEl) {
     const resp = await fetch(match.url);
     if (!resp.ok) throw new Error('Section fetch failed: ' + resp.status);
     const data = await resp.json();
-    console.log('[MHC] section data keys:', Object.keys(data), 'text length:', (data.text || data.content || '').length);
-    targetEl.innerHTML = renderMHCSections([data]);
+    const sections = data.results || [data];
+    targetEl.innerHTML = renderMHCSections(sections);
   } catch (err) {
     console.error('MHC loadMHC error:', err);
     targetEl.innerHTML = '<div class="mhc-error">Commentary could not be loaded.</div>';
