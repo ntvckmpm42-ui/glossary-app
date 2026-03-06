@@ -22580,7 +22580,7 @@ async function loadMHCForBook(t, targetEl) {
     if (!passages.length) {
       // No curated passages — fall back to chapter 1
       const ch1 = bookSections.find(s => s.chapter === 1) || bookSections[0];
-      const resp = await fetch(MHC_BASE + ch1.url);
+      const resp = await fetch(ch1.url);
       if (!resp.ok) throw new Error('Section fetch failed');
       const data = await resp.json();
       targetEl.innerHTML = renderMHCSections([data]);
@@ -22617,7 +22617,7 @@ async function loadMHCForBook(t, targetEl) {
 
       const toFetch = matched.slice(0, 2);
       const fetched = await Promise.all(
-        toFetch.map(s => fetch(MHC_BASE + s.url).then(r => r.ok ? r.json() : null).catch(() => null))
+        toFetch.map(s => fetch(s.url).then(r => r.ok ? r.json() : null).catch(() => null))
       );
       const valid = fetched.filter(Boolean);
 
@@ -22678,7 +22678,7 @@ async function loadMHC(t, targetEl) {
       if (overlapping) match = overlapping;
     }
 
-    const resp = await fetch(MHC_BASE + match.url);
+    const resp = await fetch(match.url);
     if (!resp.ok) throw new Error('Section fetch failed: ' + resp.status);
     const data = await resp.json();
     console.log('[MHC] section data keys:', Object.keys(data), 'text length:', (data.text || data.content || '').length);
