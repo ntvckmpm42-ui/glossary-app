@@ -538,55 +538,6 @@ body {
   font-family: 'Inter', system-ui, sans-serif; font-style: normal; color: #475569;
 }
 
-/* ── Matthew Henry Commentary ── */
-.mhc-wrapper {
-  border-top: 1px solid var(--border-soft);
-  padding-top: 1.5rem; margin-top: 0.5rem;
-}
-.mhc-header {
-  font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.22em;
-  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 1rem;
-}
-[data-skin="modern"] .mhc-header {
-  font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.58rem; color: #94a3b8;
-}
-.mhc-loading {
-  font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.15em;
-  text-transform: uppercase; color: var(--ink-faint); padding: 1rem 0;
-}
-.mhc-error {
-  font-family: 'IM Fell English', serif; font-style: italic;
-  font-size: 0.8rem; color: var(--ink-faint); padding: 0.5rem 0;
-}
-[data-skin="modern"] .mhc-error { font-family: 'Inter', sans-serif; font-style: normal; }
-.mhc-passage-group { margin-bottom: 1.75rem; }
-.mhc-passage-label {
-  font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.15em;
-  text-transform: uppercase; color: var(--gold-mid); margin-bottom: 0.65rem;
-  padding-bottom: 0.4rem; border-bottom: 1px solid var(--border-soft);
-}
-[data-skin="modern"] .mhc-passage-label {
-  font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.6rem;
-  color: #2563eb; border-bottom-color: #e2e8f0;
-}
-.mhc-section { margin-bottom: 1.1rem; }
-.mhc-section-title {
-  font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 600;
-  letter-spacing: 0.05em; color: var(--ink); margin-bottom: 0.5rem;
-}
-[data-skin="modern"] .mhc-section-title {
-  font-family: 'Inter', sans-serif; font-weight: 700; color: #1e293b;
-}
-.mhc-text {
-  font-family: 'IM Fell English', serif; font-size: 0.88rem;
-  color: var(--ink-dim); line-height: 1.85; max-width: 72ch;
-  margin-bottom: 0.75rem;
-}
-[data-skin="modern"] .mhc-text {
-  font-family: 'Inter', sans-serif; font-style: normal;
-  font-size: 0.85rem; color: #334155; line-height: 1.8;
-}
-
 /* Scrollbars */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -594,15 +545,46 @@ body {
 [data-skin="modern"] ::-webkit-scrollbar-thumb { background: #cbd5e1; }
 
 @media (max-width: 767px) {
-  .app-body {
-    width: 200vw;
-    transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  .app-body { flex-direction: column; }
+  .sidebar {
+    width: 100%; border-right: none; border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    transition: height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .app-body.show-detail { transform: translateX(-50%); }
-  .sidebar { width: 100vw; flex-shrink: 0; border-right: none; }
-  .detail  { width: 100vw; flex-shrink: 0; padding: 1.5rem 1.25rem 3rem; }
+  /* Peek: ~6 sidebar items when detail is visible */
+  .app-body.show-detail .sidebar {
+    height: 13rem;
+    max-height: 13rem;
+    overflow: hidden;
+  }
+  .app-body.show-detail .sidebar-list { overflow-y: auto; }
+  .detail { width: 100%; padding: 1.25rem 1rem 3rem; flex: 1; overflow-y: auto; }
   .header-back { display: flex; }
 }
+
+/* ── Matthew Henry Commentary ────────────────────────────────────────────── */
+.mhc-wrapper { border-top: 1px solid var(--border-soft); padding-top: 1.5rem; margin-top: 0.5rem; }
+.mhc-header {
+  font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 1rem;
+}
+[data-skin="modern"] .mhc-header { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.58rem; color: #94a3b8; }
+.mhc-loading { font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-faint); padding: 1rem 0; }
+.mhc-error { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.8rem; color: var(--ink-faint); padding: 0.5rem 0; }
+[data-skin="modern"] .mhc-error { font-family: 'Inter', sans-serif; font-style: normal; }
+.mhc-passage-group { margin-bottom: 1.75rem; }
+.mhc-passage-label {
+  font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--gold-mid); margin-bottom: 0.65rem;
+  padding-bottom: 0.4rem; border-bottom: 1px solid var(--border-soft);
+}
+[data-skin="modern"] .mhc-passage-label { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.6rem; color: #2563eb; border-bottom-color: #e2e8f0; }
+.mhc-section { margin-bottom: 1.1rem; }
+.mhc-section-title { font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; color: var(--ink); margin-bottom: 0.5rem; }
+[data-skin="modern"] .mhc-section-title { font-family: 'Inter', sans-serif; font-weight: 700; color: #1e293b; }
+.mhc-text { font-family: 'IM Fell English', serif; font-size: 0.88rem; color: var(--ink-dim); line-height: 1.85; max-width: 72ch; margin-bottom: 0.75rem; }
+[data-skin="modern"] .mhc-text { font-family: 'Inter', sans-serif; font-style: normal; font-size: 0.85rem; color: #334155; line-height: 1.8; }
 
 </style>
 </head>
@@ -22342,6 +22324,11 @@ function selectTerm(id) {
   if (window.innerWidth < 768) {
     document.getElementById("app-body").classList.add("show-detail");
     document.getElementById("back-btn").style.display = "flex";
+    // Scroll selected item to top of peek pane after transition starts
+    setTimeout(() => {
+      const active = document.querySelector('.sidebar-item.active');
+      if (active) active.scrollIntoView({ block: 'nearest' });
+    }, 50);
   }
 }
 
@@ -22508,186 +22495,12 @@ function renderDetail(t) {
 
   panel.innerHTML = html;
 
-  // ── MHC Commentary (async, appended after sync content) ──
+  // ── MHC Commentary (async) ──
   const mhcWrapper = document.createElement('div');
   mhcWrapper.className = 'mhc-wrapper';
-  mhcWrapper.innerHTML = '<div class="mhc-header">Matthew Henry\'s Commentary</div>'
-                       + '<div id="mhc-target"></div>';
+  mhcWrapper.innerHTML = '<div class=\"mhc-header\">Matthew Henry\'s Commentary</div><div id=\"mhc-target\"></div>';
   panel.appendChild(mhcWrapper);
   loadMHC(t, document.getElementById('mhc-target'));
-}
-
-// ── Matthew Henry Commentary ──────────────────────────────────────────────────
-// Point this at your GitHub Pages mhc repo root (with trailing slash)
-const MHC_BASE = 'https://ntvckmpm42-ui.github.io/mhc/';
-let mhcIndexCache = null;
-
-async function loadMHCIndex() {
-  if (mhcIndexCache) return mhcIndexCache;
-  console.log('[MHC] fetching index from', MHC_BASE + 'index.json');
-  const resp = await fetch(MHC_BASE + 'index.json');
-  if (!resp.ok) throw new Error('MHC index fetch failed: ' + resp.status);
-  const data = await resp.json();
-  mhcIndexCache = data.chunks || data;
-  console.log('[MHC] index ready. type:', typeof mhcIndexCache, 'isArray:', Array.isArray(mhcIndexCache),
-    'length:', mhcIndexCache.length, 'first entry keys:', Object.keys(mhcIndexCache[0] || {}));
-  return mhcIndexCache;
-}
-
-// Parses refs like "29:10–19", "3:16–17", "7:14", "1:1" (chapter:verse or chapter:verseStart–verseEnd)
-function parsePassageRef(ref) {
-  const colonIdx = ref.indexOf(':');
-  if (colonIdx === -1) {
-    return { chapter: parseInt(ref.trim(), 10), verseStart: null, verseEnd: null };
-  }
-  const chapter = parseInt(ref.slice(0, colonIdx).trim(), 10);
-  const versePart = ref.slice(colonIdx + 1).trim();
-  const dashIdx = versePart.search(/[–\-]/);
-  if (dashIdx === -1) {
-    const v = parseInt(versePart, 10);
-    return { chapter, verseStart: v, verseEnd: v };
-  }
-  const verseStart = parseInt(versePart.slice(0, dashIdx).trim(), 10);
-  const verseEnd   = parseInt(versePart.slice(dashIdx + 1).trim(), 10);
-  return { chapter, verseStart, verseEnd };
-}
-
-function renderMHCSections(sections) {
-  return sections.map(s => {
-    const title = s.section_title
-      ? '<div class="mhc-section-title">' + esc(s.section_title) + '</div>'
-      : '';
-    const paras = (s.text || '').split(/\n\n+/).filter(Boolean);
-    const body = paras.map(p => '<div class="mhc-text">' + esc(p) + '</div>').join('');
-    return '<div class="mhc-section">' + title + body + '</div>';
-  }).join('');
-}
-
-async function loadMHCForBook(t, targetEl) {
-  try {
-    const index = await loadMHCIndex();
-    const bookName = t.term;
-    const bookSections = index.filter(s => s.book_name === bookName);
-    console.log('[MHC] bookName:', bookName, 'matched sections:', bookSections.length);
-
-    if (!bookSections.length) {
-      targetEl.innerHTML = '<div class="mhc-error">No commentary found for ' + esc(bookName) + '.</div>';
-      return;
-    }
-
-    const passages = (t.passages && t.passages.length) ? t.passages : [];
-
-    if (!passages.length) {
-      // No curated passages — fall back to chapter 1
-      const ch1 = bookSections.find(s => s.chapter === 1) || bookSections[0];
-      const resp = await fetch(ch1.url);
-      if (!resp.ok) throw new Error('Section fetch failed');
-      const data = await resp.json();
-      targetEl.innerHTML = renderMHCSections(data.results || [data]);
-      return;
-    }
-
-    let html = '';
-    for (const p of passages) {
-      const parsed = parsePassageRef(p.ref);
-      const ch = parsed.chapter;
-
-      // Find sections for this chapter
-      const chSections = bookSections.filter(s => s.chapter === ch);
-      let matched = [];
-
-      if (chSections.length) {
-        if (parsed.verseStart !== null) {
-          // Prefer sections with overlapping verse range
-          const overlapping = chSections.filter(s =>
-            s.verse_start != null && s.verse_end != null &&
-            s.verse_start <= parsed.verseEnd && s.verse_end >= parsed.verseStart
-          );
-          matched = overlapping.length ? overlapping : chSections;
-        } else {
-          matched = chSections;
-        }
-      } else {
-        // Nearest chapter fallback
-        const sorted = [...bookSections].sort((a, b) =>
-          Math.abs(a.chapter - ch) - Math.abs(b.chapter - ch)
-        );
-        matched = [sorted[0]];
-      }
-
-      const toFetch = matched.slice(0, 2);
-      const fetched = await Promise.all(
-        toFetch.map(s => fetch(s.url).then(r => r.ok ? r.json().then(d => d.results ? d.results[0] : d) : null).catch(() => null))
-      );
-      const valid = fetched.filter(Boolean);
-
-      if (valid.length) {
-        console.log('[MHC] section keys:', Object.keys(valid[0]), 'text snippet:', String(valid[0].text || valid[0].content || valid[0].body || '(empty)').slice(0, 80));
-        html += '<div class="mhc-passage-group">'
-              + '<div class="mhc-passage-label">' + esc(p.ref) + ' · ' + esc(p.desc) + '</div>'
-              + renderMHCSections(valid)
-              + '</div>';
-      }
-    }
-
-    targetEl.innerHTML = html || '<div class="mhc-error">No matching commentary sections found.</div>';
-  } catch (err) {
-    console.error('MHC loadMHCForBook error:', err);
-    targetEl.innerHTML = '<div class="mhc-error">Commentary could not be loaded.</div>';
-  }
-}
-
-async function loadMHC(t, targetEl) {
-  if (!t || !targetEl) return;
-  targetEl.innerHTML = '<div class="mhc-loading">Loading commentary…</div>';
-
-  // Books of the Bible with curated passages → passage-group path
-  if (t.section === 'Books of the Bible' && t.passages && t.passages.length) {
-    return loadMHCForBook(t, targetEl);
-  }
-
-  // Books without passages → chapter 1 of that book
-  if (t.section === 'Books of the Bible') {
-    return loadMHCForBook(t, targetEl);
-  }
-
-  // All other terms → look up by first_book + first_chapter + first_verse
-  const bookName = t.first_book;
-  const chapter  = t.first_chapter || 1;
-  const verse    = t.first_verse   || null;
-
-  if (!bookName) {
-    targetEl.innerHTML = '<div class="mhc-error">No first-reference passage available.</div>';
-    return;
-  }
-
-  try {
-    const index = await loadMHCIndex();
-    const candidates = index.filter(s => s.book_name === bookName && s.chapter === chapter);
-
-    if (!candidates.length) {
-      targetEl.innerHTML = '<div class="mhc-error">No commentary found for ' + esc(bookName) + ' ' + chapter + '.</div>';
-      return;
-    }
-
-    let match = candidates[0];
-    if (verse !== null) {
-      const overlapping = candidates.find(s =>
-        s.verse_start != null && s.verse_end != null &&
-        s.verse_start <= verse && s.verse_end >= verse
-      );
-      if (overlapping) match = overlapping;
-    }
-
-    const resp = await fetch(match.url);
-    if (!resp.ok) throw new Error('Section fetch failed: ' + resp.status);
-    const data = await resp.json();
-    const sections = data.results || [data];
-    targetEl.innerHTML = renderMHCSections(sections);
-  } catch (err) {
-    console.error('MHC loadMHC error:', err);
-    targetEl.innerHTML = '<div class="mhc-error">Commentary could not be loaded.</div>';
-  }
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
@@ -22720,6 +22533,95 @@ window.addEventListener("resize", () => {
     document.getElementById("back-btn").style.display = "none";
   }
 });
+
+const MHC_BASE = 'https://ntvckmpm42-ui.github.io/mhc/';
+let mhcIndexCache = null;
+
+async function loadMHCIndex() {
+  if (mhcIndexCache) return mhcIndexCache;
+  const resp = await fetch(MHC_BASE + 'index.json');
+  if (!resp.ok) throw new Error('MHC index fetch failed: ' + resp.status);
+  const data = await resp.json();
+  mhcIndexCache = data.chunks || data;
+  return mhcIndexCache;
+}
+
+function parsePassageRef(ref) {
+  const colonIdx = ref.indexOf(':');
+  if (colonIdx === -1) return { chapter: parseInt(ref.trim(), 10), verseStart: null, verseEnd: null };
+  const chapter = parseInt(ref.slice(0, colonIdx).trim(), 10);
+  const versePart = ref.slice(colonIdx + 1).trim();
+  const dashIdx = versePart.search(/[–-]/);
+  if (dashIdx === -1) { const v = parseInt(versePart, 10); return { chapter, verseStart: v, verseEnd: v }; }
+  return { chapter, verseStart: parseInt(versePart.slice(0, dashIdx).trim(), 10),
+           verseEnd: parseInt(versePart.slice(dashIdx + 1).trim(), 10) };
+}
+
+function renderMHCSections(sections) {
+  return sections.map(s => {
+    const title = s.section_title ? '<div class="mhc-section-title">' + esc(s.section_title) + '</div>' : '';
+    const paras = (s.text || '').split(/\n\n+/).filter(Boolean);
+    const body  = paras.map(p => '<div class="mhc-text">' + esc(p) + '</div>').join('');
+    return '<div class="mhc-section">' + title + body + '</div>';
+  }).join('');
+}
+
+async function loadMHCForBook(t, targetEl) {
+  try {
+    const index = await loadMHCIndex();
+    const bookSections = index.filter(s => s.book_name === t.term);
+    if (!bookSections.length) { targetEl.innerHTML = '<div class="mhc-error">No commentary found for ' + esc(t.term) + '.</div>'; return; }
+    const passages = (t.passages && t.passages.length) ? t.passages : [];
+    if (!passages.length) {
+      const ch1 = bookSections.find(s => s.chapter === 1) || bookSections[0];
+      const data = await fetch(ch1.url).then(r => r.json());
+      targetEl.innerHTML = renderMHCSections(data.results || [data]); return;
+    }
+    let html = '';
+    for (const p of passages) {
+      const parsed = parsePassageRef(p.ref);
+      let chSections = bookSections.filter(s => s.chapter === parsed.chapter);
+      let matched = chSections.length ? chSections :
+        [[...bookSections].sort((a,b) => Math.abs(a.chapter-parsed.chapter)-Math.abs(b.chapter-parsed.chapter))[0]];
+      if (chSections.length && parsed.verseStart !== null) {
+        const ov = chSections.filter(s => s.verse_start != null && s.verse_end != null &&
+          s.verse_start <= parsed.verseEnd && s.verse_end >= parsed.verseStart);
+        if (ov.length) matched = ov;
+      }
+      const fetched = await Promise.all(matched.slice(0,2).map(s =>
+        fetch(s.url).then(r => r.ok ? r.json().then(d => d.results ? d.results[0] : d) : null).catch(() => null)
+      ));
+      const valid = fetched.filter(Boolean);
+      if (valid.length) {
+        html += '<div class="mhc-passage-group"><div class="mhc-passage-label">'
+              + esc(p.ref) + ' · ' + esc(p.desc) + '</div>'
+              + renderMHCSections(valid) + '</div>';
+      }
+    }
+    targetEl.innerHTML = html || '<div class="mhc-error">No matching commentary sections found.</div>';
+  } catch(err) { console.error('MHC book error:', err); targetEl.innerHTML = '<div class="mhc-error">Commentary could not be loaded.</div>'; }
+}
+
+async function loadMHC(t, targetEl) {
+  if (!t || !targetEl) return;
+  targetEl.innerHTML = '<div class="mhc-loading">Loading commentary…</div>';
+  if (t.section === 'Books of the Bible') return loadMHCForBook(t, targetEl);
+  if (!t.first_book) { targetEl.innerHTML = '<div class="mhc-error">No first-reference passage available.</div>'; return; }
+  try {
+    const index = await loadMHCIndex();
+    const chapter = t.first_chapter || 1;
+    const verse   = t.first_verse   || null;
+    const candidates = index.filter(s => s.book_name === t.first_book && s.chapter === chapter);
+    if (!candidates.length) { targetEl.innerHTML = '<div class="mhc-error">No commentary found for ' + esc(t.first_book) + ' ' + chapter + '.</div>'; return; }
+    let match = candidates[0];
+    if (verse !== null) {
+      const ov = candidates.find(s => s.verse_start != null && s.verse_end != null && s.verse_start <= verse && s.verse_end >= verse);
+      if (ov) match = ov;
+    }
+    const data = await fetch(match.url).then(r => { if(!r.ok) throw new Error(r.status); return r.json(); });
+    targetEl.innerHTML = renderMHCSections(data.results || [data]);
+  } catch(err) { console.error('MHC error:', err); targetEl.innerHTML = '<div class="mhc-error">Commentary could not be loaded.</div>'; }
+}
 </script>
 </body>
 </html>
