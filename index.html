@@ -22526,7 +22526,8 @@ async function loadMHCIndex() {
   if (mhcIndexCache) return mhcIndexCache;
   const resp = await fetch(MHC_BASE + 'index.json');
   if (!resp.ok) throw new Error('MHC index fetch failed: ' + resp.status);
-  mhcIndexCache = await resp.json();
+  const data = await resp.json();
+  mhcIndexCache = data.chunks || data;
   return mhcIndexCache;
 }
 
