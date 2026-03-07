@@ -1043,14 +1043,37 @@ function selectTerm(id) {
   });
   renderDetail(t);
   const el = document.querySelector('.sidebar-item[data-id="' + id + '"]');
-  if (el) el.scrollIntoView({block:"nearest"});
+  if (el) {
+    const container = document.getElementById('sidebar-list');
+    if (container) {
+      const elTop = el.offsetTop;
+      const elBottom = elTop + el.offsetHeight;
+      const cTop = container.scrollTop;
+      const cBottom = cTop + container.clientHeight;
+      if (elTop < cTop) {
+        container.scrollTop = elTop;
+      } else if (elBottom > cBottom) {
+        container.scrollTop = elBottom - container.clientHeight;
+      }
+    }
+  }
   if (window.innerWidth < 768) {
     document.getElementById("app-body").classList.add("show-detail");
     document.getElementById("back-btn").style.display = "flex";
-    // Scroll selected item to top of peek pane after transition starts
+    // Scroll selected item into view within the sidebar after transition
     setTimeout(() => {
       const active = document.querySelector('.sidebar-item.active');
-      if (active) active.scrollIntoView({ block: 'nearest' });
+      if (active) {
+        const container = document.getElementById('sidebar-list');
+        if (container) {
+          const elTop = active.offsetTop;
+          const elBottom = elTop + active.offsetHeight;
+          const cTop = container.scrollTop;
+          const cBottom = cTop + container.clientHeight;
+          if (elTop < cTop) container.scrollTop = elTop;
+          else if (elBottom > cBottom) container.scrollTop = elBottom - container.clientHeight;
+        }
+      }
     }, 50);
   }
 }
