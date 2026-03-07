@@ -838,7 +838,20 @@ const REL_LABELS = {
   married_to:"Married to", sibling_of:"Sibling of",
   ancestor_of:"Ancestor of", mentored:"Mentored",
   opposed:"Opposed", succeeded:"Succeeded",
-  allied_with:"Allied with", descended_from:"Descended from"
+  allied_with:"Allied with", descended_from:"Descended from",
+  associated_person:"Associated person",
+  associated_place:"Associated place",
+  associated_group:"Associated group",
+};
+
+// People-type rels sort before places, places before groups
+const REL_ORDER = {
+  son_of:0, daughter_of:1, father_of:2, mother_of:3,
+  married_to:4, sibling_of:5, ancestor_of:6, descended_from:7,
+  mentored:8, allied_with:9, opposed:10, succeeded:11,
+  associated_person:12,
+  associated_place:20,
+  associated_group:30,
 };
 
 let currentSection = "All";
@@ -1071,18 +1084,20 @@ function renderDetail(t) {
     html += '<div class="detail-section">';
     html += '<div class="detail-subhead">Relationships</div>';
     html += '<div class="rel-chips">';
-    t.relationships.forEach(r => {
+    const sortedRels = [...t.relationships].sort((a,b) => (REL_ORDER[a.rel_type]??99)-(REL_ORDER[b.rel_type]??99));
+    sortedRels.forEach(r => {
       const label = REL_LABELS[r.rel_type] || r.rel_type.replace(/_/g," ");
-      const linked = termByName(r.target);
+      const name  = r.to_term || r.target || "";
+      const linked = termByName(name);
       if (linked) {
         html += '<div class="rel-chip rel-chip--link" onclick="selectTerm(' + linked.id + ')">'
               + '<span class="rel-type">' + esc(label) + '</span>'
-              + '<span class="rel-name">' + esc(r.target) + '</span>'
+              + '<span class="rel-name">' + esc(name) + '</span>'
               + '</div>';
       } else {
         html += '<div class="rel-chip">'
               + '<span class="rel-type">' + esc(label) + '</span>'
-              + '<span class="rel-name">' + esc(r.target) + '</span>'
+              + '<span class="rel-name">' + esc(name) + '</span>'
               + '</div>';
       }
     });
