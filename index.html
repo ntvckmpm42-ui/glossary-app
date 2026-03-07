@@ -751,6 +751,26 @@ async function loadDatabase() {
       });
     }
 
+    // ── Query group memberships ───────────────────────────────────────────────
+    const gmRows = db.exec(`
+      SELECT gm.group_term_id, gt.term AS group_name, gm.member_term_id, mt.term AS member_name
+      FROM group_members gm
+      JOIN terms gt ON gt.id = gm.group_term_id
+      JOIN terms mt ON mt.id = gm.member_term_id
+    `)[0];
+    // memberGroupMap: term_id → [group_name, ...]  (which groups does this term belong to)
+    // groupMemberMap: group_term_id → [member_name, ...]  (who are the members of this group)
+    const memberGroupMap = {};
+    const groupMemberMap = {};
+    if (gmRows) {
+      gmRows.values.forEach(([group_id, group_name, member_id, member_name]) => {
+        if (!memberGroupMap[member_id]) memberGroupMap[member_id] = [];
+        memberGroupMap[member_id].push(group_name);
+        if (!groupMemberMap[group_id]) groupMemberMap[group_id] = [];
+        groupMemberMap[group_id].push(member_name);
+      });
+    }
+
     // ── Build TERMS array ─────────────────────────────────────────────────────
     if (!termRows) throw new Error('No terms returned from DB');
     const cols = termRows.columns;
@@ -781,14 +801,20 @@ async function loadDatabase() {
       // Passages (Books of the Bible)
       t.passages = passageMap[t.term] || [];
 
-      // groups / members — not stored in current DB schema
-      t.groups  = [];
-      t.members = [];
+      // Group memberships (which groups this term belongs to)
+      t.groups  = memberGroupMap[t.id] || [];
+      // Group members (which terms belong to this group)
+      t.members = groupMemberMap[t.id] || [];
 
       return t;
     });
 
     db.close();
+
+    // ── Build name→term index (must run after TERMS is populated) ─────────────
+    TERMS.forEach(t => {
+      if (!_nameIndex[t.term]) _nameIndex[t.term] = t;
+    });
 
     // ── Init UI ───────────────────────────────────────────────────────────────
     if (loadingEl) loadingEl.style.display = 'none';
@@ -872,11 +898,8 @@ function accentFor(section) {
   const m = currentSkin === "modern" ? SECTION_ACCENT_MODERN : SECTION_ACCENT;
   return m[section] || (currentSkin === "modern" ? "#2563eb" : "#C8A84B");
 }
-// Build a name→term lookup (takes first match; handles most cases)
+// Build a name→term lookup — populated in loadDatabase() after TERMS is ready
 const _nameIndex = {};
-TERMS.forEach(t => {
-  if (!_nameIndex[t.term]) _nameIndex[t.term] = t;
-});
 function termByName(name) { return _nameIndex[name] || null; }
 
 // ── Skin ──────────────────────────────────────────────────────────────────────
