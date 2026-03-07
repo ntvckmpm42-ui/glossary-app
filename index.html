@@ -530,6 +530,26 @@ body {
   font-size: 0.8rem; color: #475569;
 }
 
+/* Book people / places chips */
+.book-role-group { margin-bottom: 0.5rem; }
+.book-role-group:last-child { margin-bottom: 0; }
+.book-role-label {
+  font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-faint); display: block; margin-bottom: 0.25rem;
+}
+[data-skin="modern"] .book-role-label {
+  font-family: 'Inter', system-ui, sans-serif; font-weight: 600; color: #94a3b8;
+}
+.book-name-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.book-name-chip {
+  font-size: 0.68rem; color: var(--ink-dim);
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border-soft);
+  border-radius: 3px; padding: 0.15rem 0.5rem; line-height: 1.5;
+}
+[data-skin="modern"] .book-name-chip {
+  background: #f1f5f9; border-color: #e2e8f0; color: #475569;
+}
+
 /* Related terms */
 .detail-related {
   font-size: 0.8rem; color: var(--ink-dim); line-height: 1.6;
@@ -751,6 +771,32 @@ async function loadDatabase() {
       });
     }
 
+    // ── Query book people ─────────────────────────────────────────────────────
+    const bookPeopleRows = db.exec(`
+      SELECT book_name, person_name, role FROM book_people ORDER BY rowid
+    `)[0];
+    const bookPeopleMap = {};
+    if (bookPeopleRows) {
+      bookPeopleRows.values.forEach(([book_name, person_name, role]) => {
+        if (!bookPeopleMap[book_name]) bookPeopleMap[book_name] = { main: [], supporting: [] };
+        if (role === 'main') bookPeopleMap[book_name].main.push(person_name);
+        else bookPeopleMap[book_name].supporting.push(person_name);
+      });
+    }
+
+    // ── Query book places ─────────────────────────────────────────────────────
+    const bookPlacesRows = db.exec(`
+      SELECT book_name, place_name, role FROM book_places ORDER BY rowid
+    `)[0];
+    const bookPlacesMap = {};
+    if (bookPlacesRows) {
+      bookPlacesRows.values.forEach(([book_name, place_name, role]) => {
+        if (!bookPlacesMap[book_name]) bookPlacesMap[book_name] = { main: [], supporting: [] };
+        if (role === 'main') bookPlacesMap[book_name].main.push(place_name);
+        else bookPlacesMap[book_name].supporting.push(place_name);
+      });
+    }
+
     // ── Query group memberships ───────────────────────────────────────────────
     const gmRows = db.exec(`
       SELECT gm.group_term_id, gt.term AS group_name, gm.member_term_id, mt.term AS member_name
@@ -800,6 +846,10 @@ async function loadDatabase() {
 
       // Passages (Books of the Bible)
       t.passages = passageMap[t.term] || [];
+
+      // Book people / places (Books of the Bible)
+      t.book_people = bookPeopleMap[t.term] || { main: [], supporting: [] };
+      t.book_places = bookPlacesMap[t.term] || { main: [], supporting: [] };
 
       // Group memberships (which groups this term belongs to)
       t.groups  = memberGroupMap[t.id] || [];
@@ -1141,6 +1191,40 @@ function renderDetail(t) {
       }
     });
     html += '</div></div>';
+  }
+
+  // People (Books of the Bible)
+  if (t.book_people && (t.book_people.main.length || t.book_people.supporting.length)) {
+    html += '<div class="detail-section">';
+    html += '<div class="detail-subhead">People</div>';
+    if (t.book_people.main.length) {
+      html += '<div class="book-role-group"><span class="book-role-label">Main</span><div class="book-name-chips">';
+      t.book_people.main.forEach(n => { html += '<span class="book-name-chip">' + esc(n) + '</span>'; });
+      html += '</div></div>';
+    }
+    if (t.book_people.supporting.length) {
+      html += '<div class="book-role-group"><span class="book-role-label">Supporting</span><div class="book-name-chips">';
+      t.book_people.supporting.forEach(n => { html += '<span class="book-name-chip">' + esc(n) + '</span>'; });
+      html += '</div></div>';
+    }
+    html += '</div>';
+  }
+
+  // Places (Books of the Bible)
+  if (t.book_places && (t.book_places.main.length || t.book_places.supporting.length)) {
+    html += '<div class="detail-section">';
+    html += '<div class="detail-subhead">Places</div>';
+    if (t.book_places.main.length) {
+      html += '<div class="book-role-group"><span class="book-role-label">Main</span><div class="book-name-chips">';
+      t.book_places.main.forEach(n => { html += '<span class="book-name-chip">' + esc(n) + '</span>'; });
+      html += '</div></div>';
+    }
+    if (t.book_places.supporting.length) {
+      html += '<div class="book-role-group"><span class="book-role-label">Supporting</span><div class="book-name-chips">';
+      t.book_places.supporting.forEach(n => { html += '<span class="book-name-chip">' + esc(n) + '</span>'; });
+      html += '</div></div>';
+    }
+    html += '</div>';
   }
 
   // Passages (Books of the Bible)
