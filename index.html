@@ -1035,6 +1035,18 @@ function renderList() {
   }).join("");
 }
 
+function scrollSidebarToItem(el) {
+  const container = document.getElementById('sidebar-list');
+  if (!container || !el) return;
+  const elRect = el.getBoundingClientRect();
+  const cRect = container.getBoundingClientRect();
+  if (elRect.top < cRect.top) {
+    container.scrollTop += elRect.top - cRect.top;
+  } else if (elRect.bottom > cRect.bottom) {
+    container.scrollTop += elRect.bottom - cRect.bottom;
+  }
+}
+
 function selectTerm(id) {
   currentId = id;
   const t = TERMS.find(x => x.id === id);
@@ -1043,37 +1055,13 @@ function selectTerm(id) {
   });
   renderDetail(t);
   const el = document.querySelector('.sidebar-item[data-id="' + id + '"]');
-  if (el) {
-    const container = document.getElementById('sidebar-list');
-    if (container) {
-      const elTop = el.offsetTop;
-      const elBottom = elTop + el.offsetHeight;
-      const cTop = container.scrollTop;
-      const cBottom = cTop + container.clientHeight;
-      if (elTop < cTop) {
-        container.scrollTop = elTop;
-      } else if (elBottom > cBottom) {
-        container.scrollTop = elBottom - container.clientHeight;
-      }
-    }
-  }
+  scrollSidebarToItem(el);
   if (window.innerWidth < 768) {
     document.getElementById("app-body").classList.add("show-detail");
     document.getElementById("back-btn").style.display = "flex";
-    // Scroll selected item into view within the sidebar after transition
     setTimeout(() => {
       const active = document.querySelector('.sidebar-item.active');
-      if (active) {
-        const container = document.getElementById('sidebar-list');
-        if (container) {
-          const elTop = active.offsetTop;
-          const elBottom = elTop + active.offsetHeight;
-          const cTop = container.scrollTop;
-          const cBottom = cTop + container.clientHeight;
-          if (elTop < cTop) container.scrollTop = elTop;
-          else if (elBottom > cBottom) container.scrollTop = elBottom - container.clientHeight;
-        }
-      }
+      scrollSidebarToItem(active);
     }, 50);
   }
 }
