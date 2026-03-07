@@ -546,9 +546,12 @@ body {
   background: rgba(255,255,255,0.04); border: 1px solid var(--border-soft);
   border-radius: 3px; padding: 0.15rem 0.5rem; line-height: 1.5;
 }
+.book-name-chip--link { cursor: pointer; }
+.book-name-chip--link:hover { border-color: var(--glow); color: var(--gold-mid); text-decoration: underline; text-underline-offset: 2px; }
 [data-skin="modern"] .book-name-chip {
   background: #f1f5f9; border-color: #e2e8f0; color: #475569;
 }
+[data-skin="modern"] .book-name-chip--link:hover { border-color: #93c5fd; color: #2563eb; }
 
 /* Related terms */
 .detail-related {
@@ -1199,12 +1202,22 @@ function renderDetail(t) {
     html += '<div class="detail-subhead">People</div>';
     if (t.book_people.main.length) {
       html += '<div class="book-role-group"><span class="book-role-label">Main</span><div class="book-name-chips">';
-      t.book_people.main.forEach(n => { html += '<span class="book-name-chip">' + esc(n) + '</span>'; });
+      t.book_people.main.forEach(n => {
+        const linked = termByName(n);
+        html += linked
+          ? '<span class="book-name-chip book-name-chip--link" onclick="selectTerm(' + linked.id + ')">' + esc(n) + '</span>'
+          : '<span class="book-name-chip">' + esc(n) + '</span>';
+      });
       html += '</div></div>';
     }
     if (t.book_people.supporting.length) {
       html += '<div class="book-role-group"><span class="book-role-label">Supporting</span><div class="book-name-chips">';
-      t.book_people.supporting.forEach(n => { html += '<span class="book-name-chip">' + esc(n) + '</span>'; });
+      t.book_people.supporting.forEach(n => {
+        const linked = termByName(n);
+        html += linked
+          ? '<span class="book-name-chip book-name-chip--link" onclick="selectTerm(' + linked.id + ')">' + esc(n) + '</span>'
+          : '<span class="book-name-chip">' + esc(n) + '</span>';
+      });
       html += '</div></div>';
     }
     html += '</div>';
@@ -1216,12 +1229,22 @@ function renderDetail(t) {
     html += '<div class="detail-subhead">Places</div>';
     if (t.book_places.main.length) {
       html += '<div class="book-role-group"><span class="book-role-label">Main</span><div class="book-name-chips">';
-      t.book_places.main.forEach(n => { html += '<span class="book-name-chip">' + esc(n) + '</span>'; });
+      t.book_places.main.forEach(n => {
+        const linked = termByName(n);
+        html += linked
+          ? '<span class="book-name-chip book-name-chip--link" onclick="selectTerm(' + linked.id + ')">' + esc(n) + '</span>'
+          : '<span class="book-name-chip">' + esc(n) + '</span>';
+      });
       html += '</div></div>';
     }
     if (t.book_places.supporting.length) {
       html += '<div class="book-role-group"><span class="book-role-label">Supporting</span><div class="book-name-chips">';
-      t.book_places.supporting.forEach(n => { html += '<span class="book-name-chip">' + esc(n) + '</span>'; });
+      t.book_places.supporting.forEach(n => {
+        const linked = termByName(n);
+        html += linked
+          ? '<span class="book-name-chip book-name-chip--link" onclick="selectTerm(' + linked.id + ')">' + esc(n) + '</span>'
+          : '<span class="book-name-chip">' + esc(n) + '</span>';
+      });
       html += '</div></div>';
     }
     html += '</div>';
